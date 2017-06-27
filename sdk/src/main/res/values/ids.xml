@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="kwizzadView" type="id"/>
+    <item name="kwizzadWebView" type="id"/>
+    <item name="kwizzadClose" type="id"/>
+</resources>

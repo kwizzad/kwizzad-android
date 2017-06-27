@@ -1,0 +1,147 @@
+apply plugin: 'com.android.library'
+apply plugin: 'me.tatarka.retrolambda'
+apply plugin: 'idea'
+apply plugin: 'android-maven'
+apply plugin: 'maven-publish'
+
+idea {
+    module {
+        downloadJavadoc = true;
+        downloadSources = true;
+    }
+}
+
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'me.tatarka:gradle-retrolambda:3.2.5'
+    }
+}
+
+retrolambda {
+    javaVersion JavaVersion.VERSION_1_7
+}
+
+android {
+    compileSdkVersion 25
+    buildToolsVersion '25.0.3'
+    publishNonDefault false
+
+    lintOptions {
+        disable "Convert2streamapi"
+    }
+
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion 24
+        versionCode Integer.valueOf( System.env.BUILD_NUMBER ? System.env.BUILD_NUMBER : 1 )
+        versionName VERSION_NAME
+        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+
+    compile('io.reactivex:rxjava:1.1.7')
+    compile('io.reactivex:rxandroid:1.2.1')
+
+    //compile 'com.android.support:support-annotations:24.1.1'
+    compile('com.google.android.gms:play-services-basement:9.0.2') {
+        exclude module: 'support-annotations'
+        exclude module: 'support-v4'
+    }
+    compile 'com.android.support:appcompat-v7:25.3.1'
+    compile "com.google.code.gson:gson:2.7"
+
+}
+// build a jar with source files
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+task javadoc(type: Javadoc) {
+    failOnError  false
+    source = android.sourceSets.main.java.sourceFiles
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    classpath += configurations.compile
+}
+
+// build a jar with javadoc
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+
+publishing {
+    publications {
+        sdkDebug(MavenPublication) {
+            groupId GROUP
+            artifactId 'kwizzad-android'
+
+            version VERSION_NAME+"-SNAPSHOT"+Integer.valueOf( System.env.BUILD_NUMBER ? System.env.BUILD_NUMBER : 1 )
+
+            artifact("$buildDir/outputs/aar/${project.getName()}-debug.aar")
+
+            pom.withXml {
+                def dependenciesNode = asNode().appendNode('dependencies')
+                configurations.compile.allDependencies.each {
+                    if(it.group!=null && it.name != null) {
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', it.group)
+                        dependencyNode.appendNode('artifactId', it.name)
+                        dependencyNode.appendNode('version', it.version)
+                    }
+                }
+            }
+        }
+        sdkRelease(MavenPublication) {
+            groupId GROUP
+            artifactId 'kwizzad-android'
+
+            version VERSION_NAME
+            artifact("$buildDir/outputs/aar/${project.getName()}-release.aar")
+            pom.withXml {
+                def dependenciesNode = asNode().appendNode('dependencies')
+                configurations.compile.allDependencies.each {
+                    if(it.group!=null && it.name != null) {
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', it.group)
+                        dependencyNode.appendNode('artifactId', it.name)
+                        dependencyNode.appendNode('version', it.version)
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            url "$buildDir/repo"
+        }
+    }
+}

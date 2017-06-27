@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/layout"
+    >
+
+    <FrameLayout
+        android:id="@id/kwizzadView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        />
+
+    <ImageView
+        android:id="@id/kwizzadClose"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/close_button"
+        android:layout_gravity="top|right"
+        android:layout_margin="10dp"
+
+        />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminate="true"
+        />
+
+    <FrameLayout
+        android:id="@+id/closeDialog"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#cc000000"
+        >
+        <FrameLayout
+            android:id="@+id/closeDialogBackground"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="20sp">
+
+            <TextView
+                android:id="@+id/closeDialogTitle"
+                android:text="@string/alert_close_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/tx"
+                android:gravity="center"
+                />
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="25sp">
+
+                <TextView
+                    android:id="@+id/forfeitButton"
+                    android:text="@string/alert_close_forfeit"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:lines="3"
+                    style="@style/tx"
+                    android:gravity="center"
+                    android:background="@drawable/closerect"
+                    android:layout_marginRight="10sp"
+                    android:padding="8sp"
+                    />
+
+                <TextView
+                    android:layout_marginLeft="10sp"
+                    android:lines="3"
+                    android:id="@+id/claimButton"
+                    android:text="@string/alert_close_claim"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    style="@style/tx"
+                    android:background="@drawable/claimrect"
+                    android:gravity="center"
+                    android:padding="8sp"
+                    />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+
+
+
+
+
+    </FrameLayout>
+
+</FrameLayout>
