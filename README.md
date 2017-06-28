@@ -2,6 +2,12 @@
 ====================
 [![](https://jitpack.io/v/kwizzad/kwizzad-android.svg)](https://jitpack.io/#kwizzad/kwizzad-android)
 
+- [Prerequisites](#prerequisites)
+- [Installation](#add-the-kwizzad-sdk-to-your-android-project)
+- [Dependency conflicts](#resolve-dependency-conflicts)
+- [Initializing](#initialize-the-sdk)
+- [Integration](#quick-integration-request-and-show-an-ad)
+
 # Prerequisites
 
 - You already have your own KWIZZAD API KEY and PLACEMENT ID. If not, please contact TVSMILES per [E-Mail](mailto:it@tvsmiles.de) and we will register your APP.
