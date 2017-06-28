@@ -1,3 +1,7 @@
+<img align="center" src="https://kwizzad.com/assets/kwizzad_logo-ea8ef9f88e2dd51829c0497740a4f190ad1821acdbec71bef32d47d458143549.svg" alt="" width="40" height="40"> Kwizzad SDK for Android
+====================
+[![](https://jitpack.io/v/kwizzad/kwizzad-android.svg)](https://jitpack.io/#kwizzad/kwizzad-android)
+
 # Prerequisites
 
 - You already have your own KWIZZAD API KEY and PLACEMENT ID. If not, please contact TVSMILES per [E-Mail](mailto:it@tvsmiles.de) and we will register your APP.
