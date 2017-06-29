@@ -78,6 +78,7 @@ public class AdActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        // NO SUPER. :) we do not want to go back. only explicitly.
         handler.onBackPressed();
     }
 

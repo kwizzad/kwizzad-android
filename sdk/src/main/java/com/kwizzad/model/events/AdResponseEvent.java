@@ -1,20 +1,29 @@
 package com.kwizzad.model.events;
 
+import com.kwizzad.Util;
 import com.kwizzad.db.FromJson;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class AdResponseEvent extends AAdEvent {
 
     public EAdType adType;
-    public String expiry;
+    public Date expiry;
     public String url;
     public String goalUrlPattern;
     private List<Reward> rewardList = new ArrayList<>();
+    private List<String> imageUrls = new ArrayList<>();
+    private String headLine;
+    private String teaser;
+    private String brand;
+
+    private int estimatedTimeForPlayingACampaign = 20 ;// in seconds
 
     public CloseType closeButtonVisibility;
 
@@ -48,9 +57,10 @@ public class AdResponseEvent extends AAdEvent {
     public void from(JSONObject o) throws JSONException {
         super.from(o);
         adType = EAdType.fromKey(o.getString("adType"));
-        expiry = o.getString("expiry");
+        expiry = Util.fromISO8601(o.getString("expiry"));
         url = o.getString("url");
         closeButtonVisibility = CloseType.fromKey(o.optString("closeButtonVisibility"));
+
 
         goalUrlPattern = o.optString("goalUrlPattern", null);
         if (goalUrlPattern != null && goalUrlPattern.trim().length() == 0)
@@ -60,9 +70,54 @@ public class AdResponseEvent extends AAdEvent {
         if (o.has("rewards")) {
             rewardList = Reward.fromArray(o.getJSONArray("rewards"));
         }
+
+        imageUrls.clear();
+        if(o.has("images")) {
+            JSONArray jsonArrayImages = o.getJSONArray("images");
+            for (int i = 0; i < jsonArrayImages.length(); i++) {
+                JSONObject imageObject = new JSONObject(jsonArrayImages.getString(i));
+                imageUrls.add(imageObject.optString("urlTemplate"));
+            }
+        }
+
+        JSONObject ad = new JSONObject(o.getString("ad"));
+        headLine = ad.getString("headline");
+        teaser = ad.getString("teaser");
+        brand = ad.getString("brand");
     }
 
     public Iterable<Reward> rewards() {
         return rewardList;
     }
+
+    public List<String> getImageUrls() {
+        return imageUrls;
+    }
+
+    public String getHeadLine() {
+        return headLine;
+    }
+
+    public String getTeaser() {
+        return teaser;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public Boolean adWillExpireSoon(){
+        if (expiry != null) {
+            return expiry.getTime() - estimatedTimeForPlayingACampaign * 1000 < 0;
+        }
+        return false;
+    }
+
+    public Long timeToExpireMillis() {
+        if (expiry != null) {
+            return expiry.getTime() - System.currentTimeMillis() - estimatedTimeForPlayingACampaign * 1000;
+        }
+        return null;
+    }
+
 }

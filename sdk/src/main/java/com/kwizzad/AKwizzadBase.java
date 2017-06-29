@@ -7,7 +7,6 @@ import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
-import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebView;
@@ -30,8 +29,7 @@ import com.kwizzad.model.events.AdTrackingEvent;
 import com.kwizzad.model.events.NoFillEvent;
 import com.kwizzad.model.events.OpenTransactionsEvent;
 import com.kwizzad.model.events.TransactionConfirmedEvent;
-
-import org.json.JSONObject;
+import com.kwizzad.property.Property;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -64,8 +62,14 @@ public class AKwizzadBase {
     private String currentPlacement;
 
     private Subscription lastSubscription;
+    private Subscription errorSubscription;
+    private Subscription stateSubscription;
+    private Subscription transactionsSubscription;
+    private Subscription rerequestSubscription;
 
-    private List<Object> scheduledTrackingEvents = new ArrayList<>();
+    private Property<List<Object>> scheduledTrackingEventsProperty = Property.create(new ArrayList<>());
+
+    public Boolean preloadAdsAutomatically = true;
 
     public AKwizzadBase(Model model, ISchedulers schedulers, KwizzadApi api, Configuration configuration) {
         this.schedulers = schedulers;
@@ -79,14 +83,14 @@ public class AKwizzadBase {
 
         // TODO: check for change!
         model.apiKey.set(configuration.apiKey);
-        if (configuration.overrideServer != null)
-            model.server = configuration.overrideServer;
+        model.overriddenBaseUrl = configuration.overrideServer;
         model.overrideWeb = configuration.overrideWeb;
 
         if (model.installId.get() == null) {
             model.installId.set(UUID.randomUUID().toString());
         }
     }
+
 
     public void start() {
         api.observe(OpenTransactionsEvent.class)
@@ -96,11 +100,11 @@ public class AKwizzadBase {
                     QLog.d("got open transactions " + openTransactionsEvent);
 
                     Set<OpenTransaction> newSet = new HashSet<>();
-                    for (OpenTransaction cb : model.openTransactions.get()) {
+                   /* for (OpenTransaction cb : model.openTransactions.get()) {
                         if (openTransactionsEvent.transactionList.contains(cb)) {
                             newSet.add(cb);
                         }
-                    }
+                    }*/
 
                     newSet.addAll(openTransactionsEvent.transactionList);
 
@@ -137,69 +141,73 @@ public class AKwizzadBase {
                     final PlacementModel m = model.getPlacement(event.placementId);
                     if (m.getAdState() == AdState.REQUESTING_AD) {
                         m.setAdresponse(null);
-                        m.setAdState(AdState.NOFILL);
                         m.retryAfter = event.retryAfter;
+                        m.setAdState(AdState.NOFILL);
                     }
                 });
 
         final List<Object> eventsSending = new ArrayList<>();
 
-        Observable.interval(250, TimeUnit.MILLISECONDS)
-                .onBackpressureDrop()
+        scheduledTrackingEventsProperty.observe()
                 .observeOn(schedulers.mainThread())
-                .subscribe((bar) -> {
-                    if (!scheduledTrackingEvents.isEmpty() && eventsSending.size() == 0) {
-                        eventsSending.clear();
-                        eventsSending.addAll(scheduledTrackingEvents);
-                        StringBuilder sb = new StringBuilder("sending events: \n");
-                        for (Object event : eventsSending) {
-                            sb.append(event.toString());
-                            sb.append("\n");
-                        }
-                        QLog.d(sb.toString());
-
-                        Observable
-                                .from(new ArrayList<>(eventsSending))
-                                .observeOn(schedulers.io())
-                                .flatMap(api::send)
-                                .observeOn(schedulers.mainThread())
-                                // also main thread!
-                                .retryWhen(errors -> errors.flatMap(error -> {
-
-                                    eventsSending.clear();
-
-                                    QLog.e("error sending events: " + error.getMessage());
-
-                                    return defaultErrorHandler(error);
-                                }))
-                                .subscribe(new Subscriber<AEvent>() {
-                                    @Override
-                                    public void onCompleted() {
-                                        if (eventsSending.size() > 0) {
-                                            scheduledTrackingEvents.removeAll(eventsSending);
-                                            QLog.d("successfully sent " + eventsSending.size() + " tracking events");
-                                            eventsSending.clear();
-                                        }
-                                    }
-
-                                    @Override
-                                    public void onError(Throwable e) {
-                                        QLog.e(e, "error sending tracking events");
-                                    }
-
-                                    @Override
-                                    public void onNext(AEvent aEvent) {
-
-                                    }
-                                });
+                .filter(objects -> objects.size() > 0 && eventsSending.size() == 0)
+                .flatMap(objects -> {
+                    eventsSending.clear();
+                    eventsSending.addAll(objects);
+                    StringBuilder sb = new StringBuilder("sending events: \n");
+                    for (Object event : eventsSending) {
+                        sb.append(event.toString());
+                        sb.append("\n");
                     }
+                    QLog.d(sb.toString());
+                    return Observable.just(new ArrayList<>(eventsSending));
+                })
+               .subscribe(objects -> {
+                    Observable
+                            .from(objects)
+                            .observeOn(schedulers.io())
+                            .flatMap(api::send)
+                            .observeOn(schedulers.mainThread())
+                            // also main thread!
+                            .retryWhen(errors -> errors.flatMap(error -> {
+
+                                eventsSending.clear();
+
+                                QLog.e("error sending events: " + error.getMessage());
+                                return defaultErrorHandler(error);
+                            }))
+                            .subscribe(new Subscriber<AEvent>() {
+                                @Override
+                                public void onCompleted() {
+                                    if (objects.size() > 0) {
+                                        List<Object> events = scheduledTrackingEventsProperty.get();
+                                        events.removeAll(objects);
+                                        eventsSending.removeAll(objects);
+                                        scheduledTrackingEventsProperty.set(events);
+                                        QLog.d("successfully sent " + eventsSending.size() + " tracking events");
+                                    }
+                                }
+
+                                @Override
+                                public void onError(Throwable error) {
+                                    QLog.e(error, "error sending tracking events");
+                                    errors.onNext(error);
+                                }
+
+                                @Override
+                                public void onNext(AEvent aEvent) {
+
+                                }
+                            });
                 });
+
     }
 /*
 503:Service Unavailable: Back-end server is at capacity
 11-02 17:35:02.154 8682-8682/com.kwizzad.example D/COM.KWIZZAD.EXAMPLE: (AKwizzadBase.java:158) lambda$start$11: main sending events:
 :(((
  */
+
     private Observable<Long> defaultErrorHandler(Throwable error) {
         if (error instanceof HttpErrorResponseException) {
             HttpErrorResponseException e = (HttpErrorResponseException) error;
@@ -213,11 +221,28 @@ public class AKwizzadBase {
             QLog.e(error);
             return Observable.error(error);
         }
-
     }
 
     public Observable<Throwable> observeErrors() {
         return errors;
+    }
+
+    public void setErrorCallback(KwizzadErrorCallback errorCallback) {
+        if(errorSubscription != null) {
+            errorSubscription.unsubscribe();
+        }
+
+        errorSubscription = errors.subscribe(throwable -> errorCallback.onError(throwable));
+    }
+
+
+    public void setPendingTransactionsCallback(PendingTransactionsCallback callback) {
+        if(transactionsSubscription != null) {
+            transactionsSubscription.unsubscribe();
+        }
+
+        transactionsSubscription = pendingTransactions()
+                                        .subscribe(callback::callback);
     }
 
     public void requestAd(String placementId) {
@@ -249,6 +274,31 @@ public class AKwizzadBase {
                 break;
         }
         // TODO: check other states
+
+        //request add again after some delay
+        if (stateSubscription != null) {
+            stateSubscription.unsubscribe();
+        }
+        if(preloadAdsAutomatically) {
+            stateSubscription = placementModel.observeState()
+                    .skip(1) // skip first because we dont want to get current state, only state changes
+                    .subscribe(state -> {
+                        switch (state.adState) {
+                            case NOFILL:
+                                requestAdAfterDelay(placementId, (placementModel.retryAfter.getTime() - System.currentTimeMillis()));
+                                break;
+                            case RECEIVED_AD:
+                                requestAdAfterDelay(placementId, placementModel.getAdresponse().timeToExpireMillis());
+                                break;
+                            case DISMISSED:
+                                requestAdAfterDelay(placementId, 0);
+                                break;
+                            default:
+                                break;
+                        }
+                    });
+        }
+
 
         placementModel.setAdState(AdState.REQUESTING_AD);
 
@@ -319,6 +369,27 @@ public class AKwizzadBase {
                 });
     }
 
+
+    private void requestAdAfterDelay(String placementId, long delayInMilliseconds) {
+        QLog.d("requesting again after "
+                + delayInMilliseconds / 1000
+                + " seconds");
+
+        if(rerequestSubscription != null) {
+            rerequestSubscription.unsubscribe();
+        }
+
+        rerequestSubscription = Observable.just(placementId)
+                .delay(delayInMilliseconds, TimeUnit.MILLISECONDS)
+                .observeOn(schedulers.mainThread())
+                .flatMap(placementIdObj -> {
+                    requestAd(placementIdObj);
+                    return Observable.just(true);
+                })
+                .publish()
+                .connect();
+    }
+
     public void prepare(String placementId, Activity activity) {
         final PlacementModel placementModel = model.getPlacement(placementId);
 
@@ -340,6 +411,7 @@ public class AKwizzadBase {
 
                 // if it was another placement, cancel the other placement
                 if (!currentPlacement.equals(placementId)) {
+                    // TODO: shouldnt happen, but could
                     model.getPlacement(currentPlacement).setAdState(AdState.DISMISSED);
                 }
             }
@@ -360,18 +432,21 @@ public class AKwizzadBase {
                 realWidth = realMetrics.widthPixels;
                 realHeight = realMetrics.heightPixels;
             } else if (Build.VERSION.SDK_INT >= 14) {
+                //reflection for this weird in-between time
                 try {
                     Method mGetRawH = Display.class.getMethod("getRawHeight");
                     Method mGetRawW = Display.class.getMethod("getRawWidth");
                     realWidth = (Integer) mGetRawW.invoke(display);
                     realHeight = (Integer) mGetRawH.invoke(display);
                 } catch (Exception e) {
+                    //this may not be 100% accurate, but it's all we've got
                     realWidth = display.getWidth();
                     realHeight = display.getHeight();
                     Log.e("Display Info", "Couldn't use reflection to get the real display metrics.");
                 }
 
             } else {
+                //This should be close, as lower API devices should not have window navigation bars
                 realWidth = display.getWidth();
                 realHeight = display.getHeight();
             }
@@ -507,9 +582,12 @@ public class AKwizzadBase {
     }
 
     public void sendEvents(Object... events) {
+        List<Object> currentEvents = scheduledTrackingEventsProperty.get();
         for (Object event : events) {
-            scheduledTrackingEvents.add(event);
+            //scheduledTrackingEvents.add(event);
+            currentEvents.add(event);
         }
+        scheduledTrackingEventsProperty.set(currentEvents);
     }
 
     /**
@@ -586,5 +664,14 @@ public class AKwizzadBase {
                         foo -> QLog.d("foo " + foo),
                         e -> QLog.e(e)
                 );*/
+    }
+
+
+    public Boolean getPreloadAdsAutomatically() {
+        return preloadAdsAutomatically;
+    }
+
+    public void setPreloadAdsAutomatically(Boolean preloadAdsAutomatically) {
+        this.preloadAdsAutomatically = preloadAdsAutomatically;
     }
 }

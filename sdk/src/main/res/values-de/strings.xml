@@ -8,4 +8,12 @@
     <string name="close_alert_no">Abbrechen</string>
     <string name="close_alert_title">Fenster schliessen und zurück zur App?</string>
     <string name="close_alert_yes">Ja, Fenster schliessen</string>
+
+    <string name="reward.withLimit">bis zu #reward#</string>
+    <string name="reward.incenitiveText">Verdiene #potentialTotalReward# mit einem Quiz.</string>
+    <string name="transaction.confirmationText">Herzlichen Glückwunsch zu #oneOrMoreRewards#!</string>
+    <string name="enum.two">#first# und #second#</string>
+    <string name="enum.moreThanTwo">#commaSeparated# und #last#</string>
+
+
 </resources>

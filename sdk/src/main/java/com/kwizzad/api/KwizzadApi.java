@@ -8,10 +8,9 @@ import com.kwizzad.log.QLog;
 import com.kwizzad.model.Model;
 import com.kwizzad.model.events.AEvent;
 import com.kwizzad.model.events.EventLookup;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
-import rx.Observable;
-import rx.subjects.PublishSubject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -26,18 +25,28 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
+import rx.Observable;
+import rx.subjects.PublishSubject;
 
 public class KwizzadApi {
 
+    private static final int MAX_RETRIES_COUNT = 10;
+
     private final Model model;
-    ISchedulers schedulers;
     private boolean logHeaders = true;
+    private ISchedulers schedulers;
+
+    private int[] retryIntervals = {1, 5, 10, 60, 360, 1440, 1440, 1440, 1440, 1440};
+
 
     private final PublishSubject<AEvent> eventsSubject = PublishSubject.create();
 
     public KwizzadApi(ISchedulers schedulers, Model model) {
-        this.schedulers = schedulers;
         this.model = model;
+        this.schedulers = schedulers;
     }
 
     public <T extends AEvent> Observable<T> observe(Class<T> clazz) {
@@ -110,9 +119,10 @@ public class KwizzadApi {
         return Observable.fromCallable(
                 () -> {
                     final String str = convert(event).toString();
+                    final String apiKey = model.apiKey.get();
                     Request.Builder request = new Request.Builder();
                     request.method("POST", RequestBody.create("application/json; charset=UTF-8", str));
-                    request.url(model.server + model.apiKey.get() + "/" + model.installId.get());
+                    request.url(model.getBaseUrl(apiKey) + apiKey + "/" + model.installId.get());
 
                     Request r = request.build();
                     log(r, str);
@@ -120,8 +130,23 @@ public class KwizzadApi {
                 })
                 .flatMap(this::send)
                 .flatMap(this::isValidResponse)
+                .retryWhen(errors -> errors
+                        .zipWith(Observable.range(0, MAX_RETRIES_COUNT), (n, retryIndex) -> {
+                            QLog.e("error sending request: " + n.getMessage());
+                            return retryIndex;
+                        })
+                        .flatMap(retryIndex -> {
+                            Random random = new Random(System.currentTimeMillis());
+                            int timeWithRandomPart = (int) (retryIntervals[retryIndex] + retryIntervals[retryIndex] * (random.nextFloat() - 0.5));
+                            QLog.i("retry after: " + timeWithRandomPart);
+                            return Observable.timer(timeWithRandomPart, TimeUnit.MINUTES);
+                        }))
                 .flatMap(response -> {
                     try {
+
+                        if(response.code() < 499 && response.code() >= 400) {
+                            return Observable.error(new Exception(response.message()));
+                        }
 
                         String rr = response.body();
 
@@ -162,21 +187,16 @@ public class KwizzadApi {
     public Observable<Response> isValidResponse(Response response) {
         if (response != null) {
             try {
-                if (response.isSuccessful()) {
-
+                // 499 is nginx-y for a backend timeout, 500+ is reserved for server-side errors.
+                // We regard these as retry-able because probably we just have to wait for a backend
+                // to be available again later.
+                // Response errors < 499 mean errors on our side, so we won't retry the according requests.
+                if (response.code() < 499) {
                     return Observable.just(response);
-
                 } else {
-                    //if (response.body() != null)
-                    //    response.body().close();
-
                     return Observable.error(new HttpErrorResponseException(response.code(), response.message()));
                 }
             } catch (Throwable e) {
-
-                //if (response.body() != null)
-                //    response.body().close();
-
                 return Observable.error(e);
             }
         } else {
@@ -205,11 +225,6 @@ public class KwizzadApi {
 
             int responseCode = connection.getResponseCode();
 
-            if(responseCode>=499 && responseCode<=599) {
-
-                return Observable.error(new HttpErrorResponseException(responseCode, connection.getResponseMessage()));
-
-            }
             StringBuilder sb = new StringBuilder();
 
             try {

@@ -20,8 +20,13 @@ public class Model {
     public final Property<String> installId = new PersistedProperty<String>("installId", String.class);
     public final UserDataModel userDataModel = new UserDataModel();
 
-    public String server = "https://kwizzad.tvsmiles.tv/api/sdk/";
     public String overrideWeb;
+    public String overriddenBaseUrl;
+
+    public String getBaseUrl(String apiKey) {
+        if (this.overriddenBaseUrl != null) return overriddenBaseUrl;
+        return "https://" + apiKey.substring(0, 7) + ".api.kwizzad.com/api/sdk/";
+    }
 
     public PlacementModel getPlacement(String placementId) {
         if (!placements.containsKey(placementId)) {

@@ -3,6 +3,7 @@ package com.kwizzad;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.ViewGroup;
 
@@ -27,17 +28,19 @@ import rx.Observable;
 
 public final class Kwizzad {
 
+    private static final int MIN_SUPPORTED_OS_VERSION = Build.VERSION_CODES.KITKAT;
+
     private static AKwizzadBase impl;
 
-    private static ISchedulers schedulers = new AsyncSchedulers();
     private static Model model = new Model();
-    private static KwizzadApi api = new KwizzadApi(schedulers, model);
 
     public static void init(Configuration configuration) {
 
         DB.instance.init(configuration.context);
 
-        impl = new KwizzadImpl(model, schedulers, api, configuration);
+        ISchedulers schedulers = new AsyncSchedulers();
+
+        impl = new KwizzadImpl(model, schedulers, new KwizzadApi(schedulers, model), configuration);
 
         impl.start();
 
@@ -45,6 +48,14 @@ public final class Kwizzad {
     }
 
     public static void requestAd(String placementId) {
+
+        if (android.os.Build.VERSION.SDK_INT < MIN_SUPPORTED_OS_VERSION){
+            // Do something for lollipop and above versions
+            QLog.e("you are using old android version. any kwizzad ad will not be shown. (minimum supported android version is 4.3)");
+            model.getPlacement(placementId).setAdState(AdState.DISMISSED);
+            return;
+        }
+
         if(!isInitialized()) {
             QLog.d("sdk has not completed initialization yet. can not request ad yet. please wait until it finishes.");
             model.getPlacement(placementId).setAdState(AdState.DISMISSED);
@@ -52,6 +63,32 @@ public final class Kwizzad {
         }
 
         impl.requestAd(placementId);
+    }
+
+    public static Boolean getPreloadAdsAutomatically() {
+        return impl.getPreloadAdsAutomatically();
+    }
+
+    /**
+     * this param is true by default which means that it requests ad again after getting states:
+     * NOFILL - some time after we receive this state;
+     * DISMISSED - immediately after receiving this state;
+     * RECEIVED - several seconds before ad is expired.
+     * false means - dont reload ads after we get NOFILL, DISMISSED, RECEIVED states
+     *
+     * @param preloadAdsAutomatically
+     */
+    public static void setPreloadAdsAutomatically(Boolean preloadAdsAutomatically) {
+        impl.setPreloadAdsAutomatically(preloadAdsAutomatically);
+    }
+
+
+    public static boolean canShowAd(String placementId) {
+        PlacementModel placementModel = model.getPlacement(placementId);
+        if (placementModel.getAdState() == AdState.AD_READY) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -129,8 +166,16 @@ public final class Kwizzad {
         return impl.pendingTransactions();
     }
 
-    public Observable<Throwable> observeErrors() {
+    public static Observable<Throwable> observeErrors() {
         return impl.observeErrors();
+    }
+
+    public static void setErrorsCallback(KwizzadErrorCallback errorCallback) {
+        impl.setErrorCallback(errorCallback);
+    }
+
+    public static void setPendingTransactionsCallback(PendingTransactionsCallback callback) {
+        impl.setPendingTransactionsCallback(callback);
     }
 
     /**
@@ -145,6 +190,19 @@ public final class Kwizzad {
         }
 
         impl.completeTransaction(transaction);
+    }
+
+    public static void completeTransactions(Collection<OpenTransaction> openTransactions) {
+
+        if(!isInitialized()) {
+            QLog.d("sdk has not completed initialization yet. please wait until it finishes.");
+            return;
+        }
+
+        for (OpenTransaction transaction :
+                openTransactions) {
+            impl.completeTransaction(transaction);
+        }
     }
 
     public static void resume(Context context) {
@@ -172,6 +230,8 @@ public final class Kwizzad {
     public static IUserDataModel getUserData() {
         return model.userDataModel;
     }
+
+
 
     public static class AdViewBuilder {
         private HashMap<String, Object> customParameters = new HashMap<>();

@@ -8,4 +8,10 @@
     <string name="close_alert_title">Close window and go back to the app?</string>
     <string name="close_alert_yes">Yes, close window</string>
     <string name="close_alert_no">Cancel</string>
+    <string name="reward.withLimit">up to #reward#</string>
+    <string name="reward.incenitiveText">Earn #potentialTotalReward# with a quiz.</string>
+    <string name="transaction.confirmationText">Congratulations, you earned #oneOrMoreRewards#!</string>
+    <string name="enum.two">#first# and #second#</string>
+    <string name="enum.moreThanTwo">#commaSeparated#, and #last#</string>
+
 </resources>

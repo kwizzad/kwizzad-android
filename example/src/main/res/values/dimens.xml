@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="ad_image_width">80dp</dimen>
+    <dimen name="ad_image_height">100dp</dimen>
+    <dimen name="ad_corner_radius">3dp</dimen>
+</resources>

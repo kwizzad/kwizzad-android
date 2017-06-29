@@ -9,6 +9,7 @@ import com.kwizzad.property.Property;
 
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 import rx.Observable;
 import rx.subjects.PublishSubject;
@@ -95,7 +96,24 @@ public class PlacementModel implements IPlacementModel {
 
     public void setAdState(AdState state) {
         QLog.d("changing state to "+state);
+
+        handleStateChangesCallbacks(state);
+
         this.state.set(new State(state));
+    }
+
+    private void handleStateChangesCallbacks(AdState state) {
+        if(stateCallback != null) {
+            stateCallback.callback(state);
+        }
+        switch (state) {
+            case SHOWING_AD:
+                willPresentAd();
+                break;
+            case DISMISSED:
+                willDismissAd();
+                break;
+        }
     }
 
     private AdResponseEvent adresponse;
@@ -106,6 +124,42 @@ public class PlacementModel implements IPlacementModel {
             return adresponse.rewards();
         } else
             return Collections.EMPTY_LIST;
+    }
+
+    @Override
+    public List<String> getAdImageUrls() {
+        if(adresponse != null) {
+            return adresponse.getImageUrls();
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public String getTeaser() {
+        if(adresponse != null) {
+            return adresponse.getTeaser();
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public String getHeadline() {
+        if(adresponse != null) {
+            return adresponse.getHeadLine();
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public String getBrand() {
+        if(adresponse != null) {
+            return adresponse.getBrand();
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -159,4 +213,35 @@ public class PlacementModel implements IPlacementModel {
         return null;
     }
 
+
+    private PlacementSimpleCallback willPresentCallback;
+    private PlacementSimpleCallback willDismissCallback;
+    private PlacementStateCallback stateCallback;
+
+    private void willPresentAd() {
+        if(willPresentCallback != null) {
+            willPresentCallback.callback();
+        }
+    }
+
+    private void willDismissAd() {
+        if(willDismissCallback != null) {
+            willDismissCallback.callback();
+        }
+    }
+
+    @Override
+    public void setWillPresentAdCallback(PlacementSimpleCallback callback) {
+        willPresentCallback = callback;
+    }
+
+    @Override
+    public void setWillDismissAdCallback(PlacementSimpleCallback callback) {
+        willDismissCallback = callback;
+    }
+
+    @Override
+    public void setPlacementStateCallback(PlacementStateCallback callback) {
+        stateCallback = callback;
+    }
 }

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="wrap_content"
+    android:layout_width="match_parent">
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <EditText
+            android:id="@+id/et_placement"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:text="tvsa"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp">
+            <CheckBox
+                android:id="@+id/cb_preload_param"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="preload automatically"
+                android:ellipsize="end"
+                android:layout_weight="1"
+                android:layout_marginRight="10dp"
+                android:lines="2"
+                android:maxLines="2"/>
+            <Button
+                android:id="@+id/btn_preload"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Preload"
+                android:layout_gravity="center_horizontal"
+                android:layout_weight="1"/>
+        </LinearLayout>
+
+        <com.kwizzad.example.AdView
+            android:id="@+id/av"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="20dp"/>
+
+        <TextView
+            android:id="@+id/tv_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+</ScrollView>

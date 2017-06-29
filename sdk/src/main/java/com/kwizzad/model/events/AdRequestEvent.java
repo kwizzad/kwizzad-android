@@ -1,6 +1,8 @@
 package com.kwizzad.model.events;
 
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
@@ -122,12 +124,22 @@ public class AdRequestEvent extends AAdEvent {
     private final int androidApiLevel;
     private final String androidVersion;
     public String idfa;
+    public String appVersion ;
+    public String packageName ;
 
     public AdRequestEvent(Context context) {
         this.deviceInformation = Build.MANUFACTURER + " " + Build.MODEL;
         androidApiLevel = Build.VERSION.SDK_INT;
         androidVersion = Build.VERSION.RELEASE;
         androidNetwork = new Network(context);
+        packageName = context.getPackageName();
+        try {
+            PackageInfo pInfo = context.getPackageManager().getPackageInfo(packageName, 0);
+            appVersion = pInfo.versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+            appVersion = "";
+        }
     }
 
     @ToJson
@@ -148,6 +160,8 @@ public class AdRequestEvent extends AAdEvent {
         userData.put("sdkVersion", sdkVersion);
         userData.put("OSVersion", osVersion);
         userData.put("apiVersion", apiVersion);
+        userData.put("AppVersion", appVersion);
+        userData.put("PackageName", packageName);
         if (idfa != null) {
             userData.put("idfa", idfa);
         }

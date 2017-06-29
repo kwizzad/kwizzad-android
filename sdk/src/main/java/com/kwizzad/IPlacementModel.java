@@ -6,6 +6,8 @@ import com.kwizzad.model.events.AdResponseEvent;
 import com.kwizzad.model.events.Reward;
 import com.kwizzad.property.IReadableProperty;
 
+import java.util.List;
+
 import rx.Observable;
 
 public interface IPlacementModel {
@@ -17,6 +19,14 @@ public interface IPlacementModel {
     Observable<AdResponseEvent.CloseType> observeCloseType();
 
     Iterable<Reward> getRewards();
+
+    List<String> getAdImageUrls();
+
+    String getTeaser();
+
+    String getHeadline();
+
+    String getBrand();
 
     PlacementModel.State getState();
     Observable<PlacementModel.State> observeState();
@@ -31,4 +41,15 @@ public interface IPlacementModel {
     Observable<String> pageFinished();
 
     boolean hasGoalUrl();
+
+    void setWillPresentAdCallback(PlacementSimpleCallback callback);
+    void setWillDismissAdCallback(PlacementSimpleCallback callback);
+    void setPlacementStateCallback(PlacementStateCallback callback);
+
+    interface PlacementSimpleCallback {
+        void callback();
+    }
+    interface PlacementStateCallback {
+        void callback(AdState state);
+    }
 }

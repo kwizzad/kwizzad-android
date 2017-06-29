@@ -1,7 +1,5 @@
 package com.kwizzad.model;
 
-import android.location.Location;
-
 import com.kwizzad.db.DB;
 import com.kwizzad.db.ToJson;
 import com.kwizzad.log.QLog;

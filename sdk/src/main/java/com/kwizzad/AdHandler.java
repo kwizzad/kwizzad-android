@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
 
 abstract class AdHandler {
 
@@ -184,7 +183,7 @@ abstract class AdHandler {
         }
 
         try {
-            RxSubscriber.subscribe(this, placement.observeState(), placementState -> {
+            RxSubscriber.subscribe(this, placement.observeState().observeOn(AndroidSchedulers.mainThread()), placementState -> {
                 try {
                     switch (placementState.adState) {
                         case LOADING_AD:
