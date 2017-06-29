@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Kwizzad Example</string>
     <string name="alert_close_title"><![CDATA[Willst du die Aktion wirklich beenden und keine #number_of_rewards# #reward_name# erhalten?]]></string>
     <string name="alert_close_title_var"><![CDATA[Willst du die Aktion wirklich beenden und nicht bis zu #number_of_rewards# #reward_name# erhalten?]]></string>
     <string name="alert_close_title_0">Willst du dir das Angebot wirklich entgehen lassen?</string>
