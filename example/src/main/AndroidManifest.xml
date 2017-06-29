@@ -5,7 +5,7 @@
 
     <application
         android:name="com.kwizzad.example.ExampleApplication"
-        android:label="@string/app_name"
+        android:label="Kwizzad Example"
         android:theme="@style/AppTheme" >
         <activity
             android:name="com.kwizzad.example.MainActivity"
