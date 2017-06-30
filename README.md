@@ -42,7 +42,7 @@ allprojects {
 }
 
 dependencies {
-    compile ('com.github.kwizzad:kwizzad-android:0.7.13') {
+    compile ('com.github.kwizzad:kwizzad-android:x.y.z') {
 		// exclude group:"com.android.support" // uncomment in case of android support library dependency conflicts
 	}
 }
@@ -62,7 +62,7 @@ To manually include KWIZZAD dependencies your build.gradle should look like this
 
 ```java
 dependencies {
-    compile ('com.github.kwizzad:kwizzad-android:0.7.13') {
+    compile ('com.github.kwizzad:kwizzad-android:x.y.z') {
             exclude group:"com.android.support" // avoid android support library dependency conflicts
             // exclude group:  // you can exclude more potential conflicts here
             // exclude module:
