@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import rx.Observable;
+import io.reactivex.Observable;
 
 public class Reward {
     public final int amount;
@@ -141,22 +141,20 @@ public class Reward {
             return null;
         }
 
-        int currencyCount = Observable.from(rewards)
+        long currencyCount = Observable.fromIterable(rewards)
                 .map(reward -> reward.currency)
                 .distinct()
                 .count()
-                .toBlocking()
-                .single();
+                .blockingGet();
 
         if (currencyCount == 1) {
             return handleOneTotalCurrency(context, rewards);
         }
 
-        String potentialTotalRewards = enumerateAsText(context, Observable.from(rewards)
+        String potentialTotalRewards = enumerateAsText(context, Observable.fromIterable(rewards)
                 .map(reward -> reward.valueDescription(context))
                 .toList()
-                .toBlocking()
-                .single());
+                .blockingGet());
 
         return context.getString(R.string.reward_incenitiveText).replace("#potentialTotalReward#", potentialTotalRewards);
     }
@@ -177,12 +175,11 @@ public class Reward {
         String currencySuffix = currency == null ? "" : currency;
 
         boolean hasPotentiallyHigherAmount = maxTotalAmount > totalAmount;
-        int rewardsTypeCount = Observable.from(rewards)
+        long rewardsTypeCount = Observable.fromIterable(rewards)
                 .map(reward -> reward.type)
                 .distinct()
                 .count()
-                .toBlocking()
-                .single();
+                .blockingGet();
         boolean useRewardWithLimit = hasPotentiallyHigherAmount || rewardsTypeCount > 1;
 
         String potentialTotalReward;
@@ -211,11 +208,10 @@ public class Reward {
     }
 
     public static String enumerateRewardsAsText(Context context, Iterable<Reward> rewards) {
-        List<String> summarizedStrings = Observable.from(summarize(rewards))
+        List<String> summarizedStrings = Observable.fromIterable(summarize(rewards))
                 .map(reward -> reward.valueDescription(context))
                 .toList()
-                .toBlocking()
-                .single();
+                .blockingGet();
 
         return enumerateAsText(context, summarizedStrings);
     }

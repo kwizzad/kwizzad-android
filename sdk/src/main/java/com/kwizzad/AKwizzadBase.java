@@ -31,9 +31,6 @@ import com.kwizzad.model.events.OpenTransactionsEvent;
 import com.kwizzad.model.events.TransactionConfirmedEvent;
 import com.kwizzad.property.Property;
 
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -383,7 +380,7 @@ public class AKwizzadBase {
                 + " seconds");
 
         if(rerequestSubscription != null) {
-            rerequestSubscription.unsubscribe();
+            rerequestSubscription.dispose();
         }
 
         rerequestSubscription = Observable.just(placementId)
