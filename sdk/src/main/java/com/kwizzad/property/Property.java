@@ -1,7 +1,7 @@
 package com.kwizzad.property;
 
-import rx.Observable;
-import rx.subjects.BehaviorSubject;
+import io.reactivex.Observable;
+import io.reactivex.subjects.BehaviorSubject;
 
 /**
  * A {@link BehaviorSubject}, that allows reading out the current(last) value that was set to it.
@@ -78,9 +78,9 @@ public class Property<T> implements IProperty<T> {
     public Observable<T> observe() {
         synchronized (this) {
             if (subject == null) {
-                subject = BehaviorSubject.create(value);
+                subject = BehaviorSubject.createDefault(value);
             }
-            return subject.asObservable();
+            return subject;
         }
     }
 

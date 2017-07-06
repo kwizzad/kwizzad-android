@@ -10,7 +10,7 @@ buildscript {
         mavenLocal()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.3.1'
+        classpath 'com.android.tools.build:gradle:2.3.3'
         classpath 'com.github.dcendents:android-maven-gradle-plugin:1.5'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -28,4 +28,4 @@ subprojects {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.14.1'
     distributionUrl = "http://services.gradle.org/distributions/gradle-${gradleVersion}-all.zip"
-}
+} 

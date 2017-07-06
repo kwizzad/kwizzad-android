@@ -11,8 +11,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import rx.Observable;
-import rx.subjects.PublishSubject;
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
 
 public class PlacementModel implements IPlacementModel {
 

@@ -1,16 +1,17 @@
 package com.kwizzad;
 
-import rx.Scheduler;
-import rx.schedulers.Schedulers;
+
+import io.reactivex.Scheduler;
+import io.reactivex.schedulers.Schedulers;
 
 public class SyncSchedulers implements ISchedulers {
     @Override
     public Scheduler mainThread() {
-        return Schedulers.immediate();
+        return Schedulers.computation();
     }
 
     @Override
     public Scheduler io() {
-        return Schedulers.immediate();
+        return Schedulers.computation();
     }
 }

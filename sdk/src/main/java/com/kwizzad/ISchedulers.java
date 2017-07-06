@@ -1,6 +1,6 @@
 package com.kwizzad;
 
-import rx.Scheduler;
+import io.reactivex.Scheduler;
 
 public interface ISchedulers {
     Scheduler mainThread();
