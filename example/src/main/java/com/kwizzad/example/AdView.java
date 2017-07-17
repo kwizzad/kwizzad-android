@@ -11,6 +11,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.kwizzad.IPlacementModel;
+import com.kwizzad.model.ImageInfo;
 import com.kwizzad.model.events.Reward;
 
 import java.net.URL;
@@ -71,11 +72,11 @@ public class AdView extends FrameLayout {
         Iterable<Reward> rewards = placementModel.getRewards();
         Iterable<Reward> summarizedRewards = Reward.summarize(rewards);
 
-        List<String> imageUrl = placementModel.getAdImageUrls();
+        List<ImageInfo> imageUrls = placementModel.getAdImageUrls();
 
 
         Observable.fromCallable(() -> {
-                    URL newurl = new URL(imageUrl.get(0).replace("{{width}}", Integer.toString(300)).replace("{{height}}", Integer.toString(300)));
+                    URL newurl = new URL(placementModel.getAdResponse().squaredThumbnailURL());
                     return BitmapFactory.decodeStream(newurl.openConnection().getInputStream());
                 })
                 .subscribeOn(Schedulers.io())

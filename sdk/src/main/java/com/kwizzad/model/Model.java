@@ -6,9 +6,12 @@ import com.kwizzad.property.Property;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 public class Model {
+    private static final int serverIndex = new Random(System.currentTimeMillis()).nextInt(3) + 1;
+
     public volatile String advertisingId;
     public Property<Boolean> initialized = Property.create(false);
 
@@ -25,7 +28,7 @@ public class Model {
 
     public String getBaseUrl(String apiKey) {
         if (this.overriddenBaseUrl != null) return overriddenBaseUrl;
-        return "https://" + apiKey.substring(0, 7) + ".api.kwizzad.com/api/sdk/";
+        return "https://" + apiKey.substring(0, 7) + "-" + Integer.toString(serverIndex) +  ".api.kwizzad.com/api/sdk/";
     }
 
     public PlacementModel getPlacement(String placementId) {

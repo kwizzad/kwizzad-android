@@ -68,10 +68,10 @@ public class PlacementJavascriptInterface {
                         if (dismissOnGoalUrl) {
                             QLog.d("goal reached and dismissing " + url);
 
-                            if (placementModel.getAdState() != AdState.DISMISSED && placementModel.getAdresponse() != null) {
+                            if (placementModel.getAdState() != AdState.DISMISSED && placementModel.getAdResponse() != null) {
                                 kwizzad.sendEvents(
                                         AdTrackingEvent
-                                                .create("adDismissed", placementModel.getAdresponse().adId)
+                                                .create("adDismissed", placementModel.getAdResponse().adId)
                                                 .internalParameter("step", placementModel.currentStep)
                                 );
                             }
@@ -209,7 +209,7 @@ public class PlacementJavascriptInterface {
 
                     placementModel.setAdState(AdState.GOAL_REACHED);
 
-                    kwizzad.sendEvents(AdTrackingEvent.create("goalReached", placementModel.getAdresponse().adId));
+                    kwizzad.sendEvents(AdTrackingEvent.create("goalReached", placementModel.getAdResponse().adId));
 
                     goalReached = false;
                 }
@@ -244,7 +244,7 @@ public class PlacementJavascriptInterface {
         QLog.d("jsi: challenge placementState: " + num);
 
         handler.post(() -> {
-            kwizzad.sendEvents(AdTrackingEvent.create("adLoaded", placementModel.getAdresponse().adId));
+            kwizzad.sendEvents(AdTrackingEvent.create("adLoaded", placementModel.getAdResponse().adId));
         });
 
         handler.postDelayed(() -> {
@@ -285,7 +285,7 @@ public class PlacementJavascriptInterface {
         if (num >= 0) {
             handler.post(() -> {
                 QLog.d("challenge completed, current step " + num);
-                kwizzad.sendEvents(AdTrackingEvent.create("challenge" + num + "completed", placementModel.getAdresponse().adId));
+                kwizzad.sendEvents(AdTrackingEvent.create("challenge" + num + "completed", placementModel.getAdResponse().adId));
                 placementModel.currentStep = num + 1;
             });
         }

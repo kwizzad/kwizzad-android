@@ -1,6 +1,7 @@
 package com.kwizzad;
 
 import com.kwizzad.model.AdState;
+import com.kwizzad.model.ImageInfo;
 import com.kwizzad.model.PlacementModel;
 import com.kwizzad.model.events.AdResponseEvent;
 import com.kwizzad.model.events.Reward;
@@ -20,7 +21,9 @@ public interface IPlacementModel {
 
     Iterable<Reward> getRewards();
 
-    List<String> getAdImageUrls();
+    AdResponseEvent getAdResponse();
+
+    List<ImageInfo> getAdImageUrls();
 
     String getTeaser();
 

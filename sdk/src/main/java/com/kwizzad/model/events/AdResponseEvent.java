@@ -2,6 +2,7 @@ package com.kwizzad.model.events;
 
 import com.kwizzad.Util;
 import com.kwizzad.db.FromJson;
+import com.kwizzad.model.ImageInfo;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -18,7 +19,7 @@ public class AdResponseEvent extends AAdEvent {
     public String url;
     public String goalUrlPattern;
     private List<Reward> rewardList = new ArrayList<>();
-    private List<String> imageUrls = new ArrayList<>();
+    private List<ImageInfo> imageUrls = new ArrayList<>();
     private String headLine;
     private String teaser;
     private String brand;
@@ -76,7 +77,7 @@ public class AdResponseEvent extends AAdEvent {
             JSONArray jsonArrayImages = o.getJSONArray("images");
             for (int i = 0; i < jsonArrayImages.length(); i++) {
                 JSONObject imageObject = new JSONObject(jsonArrayImages.getString(i));
-                imageUrls.add(imageObject.optString("urlTemplate"));
+                imageUrls.add(new ImageInfo(imageObject.optString("urlTemplate"), imageObject.optString("type")));
             }
         }
 
@@ -90,7 +91,7 @@ public class AdResponseEvent extends AAdEvent {
         return rewardList;
     }
 
-    public List<String> getImageUrls() {
+    public List<ImageInfo> getImageUrls() {
         return imageUrls;
     }
 
@@ -118,6 +119,19 @@ public class AdResponseEvent extends AAdEvent {
             return expiry.getTime() - System.currentTimeMillis() - estimatedTimeForPlayingACampaign * 1000;
         }
         return null;
+    }
+
+    public String squaredThumbnailURL(int width) {
+        for(ImageInfo info : imageUrls) {
+            if (info.getType().equalsIgnoreCase("header")) {
+                return info.getUrl(width, width);
+            }
+        }
+        return null;
+    }
+
+    public String squaredThumbnailURL() {
+        return squaredThumbnailURL(200);
     }
 
 }

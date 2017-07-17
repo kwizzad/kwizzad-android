@@ -150,7 +150,7 @@ public final class Kwizzad {
      * Use getPlacementModel().getRewards() instead
      */
     public static Iterable<Reward> getRewards(String placementId) {
-        AdResponseEvent adResponse = model.getPlacement(placementId).getAdresponse();
+        AdResponseEvent adResponse = model.getPlacement(placementId).getAdResponse();
         if (adResponse != null) {
             return adResponse.rewards();
         } else

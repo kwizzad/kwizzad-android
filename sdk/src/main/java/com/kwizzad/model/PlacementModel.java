@@ -46,7 +46,8 @@ public class PlacementModel implements IPlacementModel {
         ).subscribe(closeButtonVisible::set);
     }
 
-    public AdResponseEvent getAdresponse() {
+    @Override
+    public AdResponseEvent getAdResponse() {
         return adresponse;
     }
 
@@ -127,7 +128,7 @@ public class PlacementModel implements IPlacementModel {
     }
 
     @Override
-    public List<String> getAdImageUrls() {
+    public List<ImageInfo> getAdImageUrls() {
         if(adresponse != null) {
             return adresponse.getImageUrls();
         } else {

@@ -288,7 +288,7 @@ public class AKwizzadBase {
                                 requestAdAfterDelay(placementId, (placementModel.retryAfter.getTime() - System.currentTimeMillis()));
                                 break;
                             case RECEIVED_AD:
-                                requestAdAfterDelay(placementId, placementModel.getAdresponse().timeToExpireMillis());
+                                requestAdAfterDelay(placementId, placementModel.getAdResponse().timeToExpireMillis());
                                 break;
                             case DISMISSED:
                                 requestAdAfterDelay(placementId, 0);
@@ -462,7 +462,7 @@ public class AKwizzadBase {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 CookieManager.getInstance().setAcceptThirdPartyCookies(currentWebView, true);
             }
-            currentWebView.setBackgroundColor(0xff000000);
+            currentWebView.setBackgroundColor(0xffffffff);
 
 
             if (lastSubscription != null) {
@@ -498,12 +498,12 @@ public class AKwizzadBase {
 
             placementModel.setAdState(AdState.LOADING_AD);
 
-            QLog.d("load url " + placementModel.getAdresponse().url);
+            QLog.d("load url " + placementModel.getAdResponse().url);
 
-            currentWebView.loadUrl(placementModel.getAdresponse().url);
-            final AdResponseEvent adresponse = placementModel.getAdresponse();
+            currentWebView.loadUrl(placementModel.getAdResponse().url);
+            final AdResponseEvent adresponse = placementModel.getAdResponse();
             new Handler().postDelayed(() -> {
-                if (placementModel.getAdState() == AdState.LOADING_AD && adresponse == placementModel.getAdresponse()) {
+                if (placementModel.getAdState() == AdState.LOADING_AD && adresponse == placementModel.getAdResponse()) {
                     QLog.w("ad loading timeout reached. this shouldnt happen, but it did. cancelling ad :(");
                     placementModel.setAdState(AdState.DISMISSED);
                 }
@@ -546,7 +546,7 @@ public class AKwizzadBase {
 
         frame.addView(currentWebView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        sendEvents(AdTrackingEvent.create("adStarted", placementModel.getAdresponse().adId).setCustomParameters(customParameters));
+        sendEvents(AdTrackingEvent.create("adStarted", placementModel.getAdResponse().adId).setCustomParameters(customParameters));
     }
 
     public void close(String placementId) {
@@ -556,10 +556,10 @@ public class AKwizzadBase {
 
         AdState adState = placementModel.getAdState();
 
-        if (adState != AdState.DISMISSED && placementModel.getAdresponse() != null) {
+        if (adState != AdState.DISMISSED && placementModel.getAdResponse() != null) {
             sendEvents(
                     AdTrackingEvent
-                            .create("adDismissed", placementModel.getAdresponse().adId)
+                            .create("adDismissed", placementModel.getAdResponse().adId)
                             .internalParameter("step", placementModel.currentStep)
             );
         }
