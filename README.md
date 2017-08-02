@@ -42,7 +42,7 @@ allprojects {
 }
 
 dependencies {
-    compile ('com.github.kwizzad:kwizzad-android:0.7.13') {
+    compile ('com.github.kwizzad:kwizzad-android:x.y.z') {
 		// exclude group:"com.android.support" // uncomment in case of android support library dependency conflicts
 	}
 }
