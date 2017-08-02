@@ -229,7 +229,7 @@ Once the user successfully completes a rewarded KWIZZAD you will receive a callb
 
 Callbacks can be handled both in app or using KWIZZADs server2server postback configuration as an HTTP GET request to a URL of your choice.
 
-In order to receive callbacks inapp you must subscribe to the Kwizzad.pendingEvents()  observable to receive notifications on new callbacks. If you are only using server2server callbacks you do not have to implement this.
+In order to receive callbacks inapp you must subscribe to the Kwizzad.pendingTransactions() observable or use Kwizzad.setPendingTransactionsCallback() to receive notifications on new callbacks. If you are only using server2server callbacks you do not have to implement this.
 
 There are two types of events available and defined in com.kwizzad.model.Type:
 
