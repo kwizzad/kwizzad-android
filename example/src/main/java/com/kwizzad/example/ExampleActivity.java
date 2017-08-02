@@ -259,12 +259,6 @@ public class ExampleActivity extends AppCompatActivity {
                     .setPositiveButton(android.R.string.ok,
                             (dialog, whichButton) -> Kwizzad.completeTransactions(openTransactions)
                     )
-                    .setNegativeButton(android.R.string.cancel,
-                            (dialog, whichButton) -> {
-                                Kwizzad.completeTransactions(openTransactions);
-                                dialog.dismiss();
-                            }
-                    )
                     .create()
                     .show();
         }

@@ -47,6 +47,10 @@ public final class Kwizzad {
         model.initialized.set(true);
     }
 
+    private Kwizzad(){
+        //private constuctor to prevent creating instances of this class
+    }
+
     public static void requestAd(String placementId) {
 
         if (android.os.Build.VERSION.SDK_INT < MIN_SUPPORTED_OS_VERSION){

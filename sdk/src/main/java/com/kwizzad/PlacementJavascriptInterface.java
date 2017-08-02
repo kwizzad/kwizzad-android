@@ -110,11 +110,11 @@ public class PlacementJavascriptInterface {
                         || url.startsWith("http://play.google.com")
                         || url.startsWith("https://play.google.com")) {
                     try {
+                        placementModel.setAdState(AdState.DISMISSED);
                         Intent intent = new Intent(Intent.ACTION_VIEW);
                         intent.setData(Uri.parse(url));
                         Activity host = (Activity) view.getContext();
                         host.startActivity(intent);
-                        placementModel.setAdState(AdState.DISMISSED);
                         return true;
                     } catch (Exception e) {
                         QLog.e(e);
