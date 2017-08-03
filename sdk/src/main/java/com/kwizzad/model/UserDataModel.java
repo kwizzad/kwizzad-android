@@ -76,7 +76,7 @@ public class UserDataModel implements IUserDataModel {
     }
 
     private void save(String key, Object value) {
-        if(value != null && data.get(key) != null && !value.equals(data.get(key))) {
+        if(value != null && data.get(key) != null && value.equals(data.get(key))) {
             // unchanged
             return;
         }
