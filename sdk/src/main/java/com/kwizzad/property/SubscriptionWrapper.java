@@ -1,16 +1,16 @@
 package com.kwizzad.property;
 
-import rx.Subscription;
+import io.reactivex.disposables.Disposable;
 
 /**
- * Wraps a {@link Subscription} so that it will unsubscribe automatically also on RxBinder.
+ * Wraps a {@link Disposable} so that it will unsubscribe automatically also on RxBinder.
  * All subscriptions provided by {@link RxSubscriber} are wrapped this way.
  *
- * @see rx.Subscription
+ * @see io.reactivex.disposables.Disposable
  */
-public final class SubscriptionWrapper implements Subscription {
+public final class SubscriptionWrapper implements Disposable {
 
-    private final Subscription subscription;
+    private final Disposable subscription;
 
     /**
      * The tag on {@link RxSubscriber}
@@ -23,7 +23,7 @@ public final class SubscriptionWrapper implements Subscription {
      * @param subscription The subscription
      * @param tag          The tag on {@link RxSubscriber}
      */
-    public SubscriptionWrapper(Subscription subscription, Object tag) {
+    public SubscriptionWrapper(Disposable subscription, Object tag) {
         this.subscription = subscription;
         this.tag = tag;
     }
@@ -33,7 +33,7 @@ public final class SubscriptionWrapper implements Subscription {
      * unsubscribe and remove the subscription getFrom {@link RxSubscriber}
      */
     @Override
-    public void unsubscribe() {
+    public void dispose() {
         RxSubscriber.unsubscribe(tag, subscription);
     }
 
@@ -43,7 +43,7 @@ public final class SubscriptionWrapper implements Subscription {
      * @return if it is still subscribed
      */
     @Override
-    public boolean isUnsubscribed() {
-        return subscription.isUnsubscribed();
+    public boolean isDisposed() {
+        return subscription.isDisposed();
     }
 }

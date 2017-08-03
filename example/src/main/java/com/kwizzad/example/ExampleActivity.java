@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import rx.Subscription;
+import io.reactivex.disposables.Disposable;
 
 
 /**
@@ -43,8 +43,8 @@ public class ExampleActivity extends AppCompatActivity {
     //we need this param to avoid showing rewards dialog several time
     private boolean rewardsAreShown = false;
 
-    private Subscription pendingSubscription;
-    private Subscription stateSubscription;
+    private Disposable pendingSubscription;
+    private Disposable stateSubscription;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -58,7 +58,7 @@ public class ExampleActivity extends AppCompatActivity {
         /*
          * subscribe to errors
          */
-        RxSubscriber.subscribe(this, Kwizzad.observeErrors(), throwable -> {
+        RxSubscriber.subscribe(this, Kwizzad.observeErrors(), ignore -> {}, throwable -> {
             tvLog.setText("observed error " + throwable.getMessage() + " \n" + tvLog.getText());
         });
 
@@ -188,7 +188,7 @@ public class ExampleActivity extends AppCompatActivity {
 
     private void resubscribeToStateChanges() {
         if(stateSubscription != null) {
-            stateSubscription.unsubscribe();
+            stateSubscription.dispose();
         }
         /*
           listen to states changes
@@ -278,12 +278,12 @@ public class ExampleActivity extends AppCompatActivity {
 
 
         if(stateSubscription != null) {
-            stateSubscription.unsubscribe();
+            stateSubscription.dispose();
         }
 
 
         if(pendingSubscription != null) {
-            pendingSubscription.unsubscribe();
+            pendingSubscription.dispose();
         }
     }
 }

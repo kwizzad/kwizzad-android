@@ -1,6 +1,6 @@
 package com.kwizzad.property;
 
-import rx.Observable;
+import io.reactivex.Observable;
 
 public interface IReadableProperty<T> {
     /**

@@ -3,8 +3,7 @@ package com.kwizzad.property;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import rx.functions.Func1;
+import java.util.function.Function;
 
 /**
  * Marks a transaction that will save commands to apply at once with one binding firing later.
@@ -35,7 +34,7 @@ public class ListTransaction<LIST_TYPE> {
         return this;
     }
 
-    public <E> ListTransaction<LIST_TYPE> addAll(Collection<E> source, Func1<E, LIST_TYPE> convertFunction) {
+    public <E> ListTransaction<LIST_TYPE> addAll(Collection<E> source, Function<E, LIST_TYPE> convertFunction) {
         ops.add(new AddConvertOperation<>(source, convertFunction));
         return this;
     }

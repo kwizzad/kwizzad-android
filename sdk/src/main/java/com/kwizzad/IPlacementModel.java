@@ -9,7 +9,7 @@ import com.kwizzad.property.IReadableProperty;
 
 import java.util.List;
 
-import rx.Observable;
+import io.reactivex.Observable;
 
 public interface IPlacementModel {
 

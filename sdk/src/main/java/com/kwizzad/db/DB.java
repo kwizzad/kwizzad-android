@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import rx.functions.Action1;
+import io.reactivex.functions.Consumer;
 
 /**
  * simplified db storage solution with direct storage, no offloading
@@ -42,10 +42,10 @@ public class DB {
         public final Class clazz;
         public final Object defaultValue;
         // TODO: weak reference
-        public final Action1 initFunc;
+        public final Consumer initFunc;
         public final String password;
 
-        public Initme(String key, Class clazz, Object defaultValue, Action1 initFunc, String password) {
+        public Initme(String key, Class clazz, Object defaultValue, Consumer initFunc, String password) {
             this.key = key;
             this.clazz = clazz;
             this.defaultValue = defaultValue;
@@ -58,10 +58,10 @@ public class DB {
     private static final class InitList {
         public final String key;
         public final Class clazz;
-        public final Action1 initFunc;
+        public final Consumer initFunc;
         public final String password;
 
-        public InitList(String key, Class clazz, Action1 initFunc, String password) {
+        public InitList(String key, Class clazz, Consumer initFunc, String password) {
             this.key = key;
             this.clazz = clazz;
             this.initFunc = initFunc;
@@ -102,7 +102,7 @@ public class DB {
         }
     }
 
-    public <T> void requestInit(String key, Class<? super T> clazz, T defaultValue, Action1<? super T> initFunc, String password) {
+    public <T> void requestInit(String key, Class<? super T> clazz, T defaultValue, Consumer<? super T> initFunc, String password) {
         Initme im = new Initme(key, clazz, defaultValue, initFunc, password);
         if (context != null) {
             rinit(im);
@@ -111,7 +111,7 @@ public class DB {
         }
     }
 
-    public <T> void requestListInit(String key, Class<? super T> clazz, Action1<List<T>> initFunc, String password) {
+    public <T> void requestListInit(String key, Class<? super T> clazz, Consumer<List<T>> initFunc, String password) {
         InitList im = new InitList(key, clazz, initFunc, password);
         if (context != null) {
             rinit(im);
@@ -122,12 +122,20 @@ public class DB {
 
     @SuppressWarnings("unchecked")
     private void rinit(Initme im) {
-        im.initFunc.call(_get(im.key, im.clazz, im.defaultValue, im.password));
+        try {
+            im.initFunc.accept(_get(im.key, im.clazz, im.defaultValue, im.password));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @SuppressWarnings("unchecked")
     private void rinit(InitList im) {
-        im.initFunc.call(_getList(im.key, im.clazz, im.password));
+        try {
+            im.initFunc.accept(_getList(im.key, im.clazz, im.password));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void store(final String key, final Object data, String password) {

@@ -17,9 +17,9 @@ import com.kwizzad.model.Model;
 import com.kwizzad.model.PlacementModel;
 import com.kwizzad.model.events.AdTrackingEvent;
 
-import rx.Observable;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * if (typeof window.handleKwizzadJIEvent === 'function') {

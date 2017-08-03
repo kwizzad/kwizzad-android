@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import rx.Observable;
-import rx.subjects.PublishSubject;
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
 
 public class KwizzadApi {
 
@@ -173,7 +173,7 @@ public class KwizzadApi {
                             }
                         }
 
-                        return Observable.from(events);
+                        return Observable.fromIterable(events);
                     } catch (Exception ignored) {
                         QLog.v(ignored);
                     } finally {

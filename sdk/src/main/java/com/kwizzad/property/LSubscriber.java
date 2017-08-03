@@ -3,62 +3,60 @@ package com.kwizzad.property;
 import java.util.HashSet;
 import java.util.Set;
 
-import rx.Observable;
-import rx.Single;
-import rx.Subscriber;
-import rx.Subscription;
-import rx.functions.Action1;
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.Single;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
 
 public final class LSubscriber {
 
-    final private Set<Subscription> subscriptions = new HashSet<>();
+    final private Set<Disposable> disposables = new HashSet<>();
 
-    public <T> Subscription subscribe(Observable<? extends T> source, Action1<? super T> onNext) {
-        Subscription subscription = source.subscribe(onNext);
-        subscriptions.add(subscription);
+    public <T> Disposable subscribe(Observable<? extends T> source, Consumer<? super T> onNext) {
+        Disposable subscription = source.subscribe(onNext);
+        disposables.add(subscription);
         return subscription;
     }
 
-    public <T> Subscription subscribe(Observable<? extends T> source, Action1<? super T> onNext, Action1<Throwable> error) {
-        Subscription subscription = source.subscribe(onNext, error);
-        subscriptions.add(subscription);
+    public <T> Disposable subscribe(Observable<? extends T> source, Consumer<? super T> onNext, Consumer<Throwable> error) {
+        Disposable subscription = source.subscribe(onNext, error);
+        disposables.add(subscription);
         return subscription;
     }
 
-    public <T> Subscription subscribe(Observable<? extends T> source, Subscriber<T> subscriber) {
-        Subscription subscription = source.subscribe(subscriber);
-        subscriptions.add(subscription);
+    public <T> void subscribe(Observable<? extends T> source, Observer<T> subscriber) {
+        source.subscribe(subscriber);
+    }
+
+    public <T> Disposable subscribe(Single<? extends T> source, Consumer<? super T> onNext) {
+        Disposable subscription = source.subscribe(onNext);
+        disposables.add(subscription);
         return subscription;
     }
 
-    public <T> Subscription subscribe(Single<? extends T> source, Action1<? super T> onNext) {
-        Subscription subscription = source.subscribe(onNext);
-        subscriptions.add(subscription);
+    public <T> Disposable subscribe(Single<? extends T> source, Consumer<? super T> onNext, Consumer<Throwable> error) {
+        Disposable subscription = source.subscribe(onNext, error);
+        disposables.add(subscription);
         return subscription;
     }
 
-    public <T> Subscription subscribe(Single<? extends T> source, Action1<? super T> onNext, Action1<Throwable> error) {
-        Subscription subscription = source.subscribe(onNext, error);
-        subscriptions.add(subscription);
-        return subscription;
-    }
-
-    public void unsubscribe(Subscription subscription) {
-        if (subscriptions.contains(subscription)) {
-            subscription.unsubscribe();
-            subscriptions.remove(subscription);
+    public void unsubscribe(Disposable subscription) {
+        if (disposables.contains(subscription)) {
+            subscription.dispose();
+            disposables.remove(subscription);
         }
     }
 
     public void unsubscribe() {
-        for (Subscription subscription : subscriptions) {
-            subscription.unsubscribe();
+        for (Disposable disposable : disposables) {
+            disposable.dispose();
         }
-        subscriptions.clear();
+        disposables.clear();
     }
 
     public boolean isEmpty() {
-        return subscriptions.isEmpty();
+        return disposables.isEmpty();
     }
 
 }

@@ -43,10 +43,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import rx.Observable;
-import rx.Subscriber;
-import rx.Subscription;
-import rx.subjects.PublishSubject;
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.subjects.PublishSubject;
 
 public class AKwizzadBase {
 
@@ -61,11 +62,11 @@ public class AKwizzadBase {
     private WebView currentWebView;
     private String currentPlacement;
 
-    private Subscription lastSubscription;
-    private Subscription errorSubscription;
-    private Subscription stateSubscription;
-    private Subscription transactionsSubscription;
-    private Subscription rerequestSubscription;
+    private Disposable lastSubscription;
+    private Disposable errorSubscription;
+    private Disposable stateSubscription;
+    private Disposable transactionsSubscription;
+    private Disposable rerequestSubscription;
 
     private Property<List<Object>> scheduledTrackingEventsProperty = Property.create(new ArrayList<>());
 
@@ -163,8 +164,7 @@ public class AKwizzadBase {
                     return Observable.just(new ArrayList<>(eventsSending));
                 })
                .subscribe(objects -> {
-                    Observable
-                            .from(objects)
+                    Observable.fromIterable(objects)
                             .observeOn(schedulers.io())
                             .flatMap(api::send)
                             .observeOn(schedulers.mainThread())
@@ -176,17 +176,13 @@ public class AKwizzadBase {
                                 QLog.e("error sending events: " + error.getMessage());
                                 return defaultErrorHandler(error);
                             }))
-                            .subscribe(new Subscriber<AEvent>() {
+                            .subscribe(new Observer<AEvent>() {
+
                                 @Override
-                                public void onCompleted() {
-                                    if (objects.size() > 0) {
-                                        List<Object> events = scheduledTrackingEventsProperty.get();
-                                        events.removeAll(objects);
-                                        eventsSending.removeAll(objects);
-                                        scheduledTrackingEventsProperty.set(events);
-                                        QLog.d("successfully sent " + eventsSending.size() + " tracking events");
-                                    }
-                                }
+                                public void onNext(AEvent aEvent) {}
+
+                                @Override
+                                public void onSubscribe(@NonNull Disposable d) {}
 
                                 @Override
                                 public void onError(Throwable error) {
@@ -195,8 +191,14 @@ public class AKwizzadBase {
                                 }
 
                                 @Override
-                                public void onNext(AEvent aEvent) {
-
+                                public void onComplete() {
+                                    if (objects.size() > 0) {
+                                        List<Object> events = scheduledTrackingEventsProperty.get();
+                                        events.removeAll(objects);
+                                        eventsSending.removeAll(objects);
+                                        scheduledTrackingEventsProperty.set(events);
+                                        QLog.d("successfully sent " + eventsSending.size() + " tracking events");
+                                    }
                                 }
                             });
                 });
@@ -229,7 +231,7 @@ public class AKwizzadBase {
 
     public void setErrorCallback(KwizzadErrorCallback errorCallback) {
         if(errorSubscription != null) {
-            errorSubscription.unsubscribe();
+            errorSubscription.dispose();
         }
 
         errorSubscription = errors.subscribe(throwable -> errorCallback.onError(throwable));
@@ -238,7 +240,7 @@ public class AKwizzadBase {
 
     public void setPendingTransactionsCallback(PendingTransactionsCallback callback) {
         if(transactionsSubscription != null) {
-            transactionsSubscription.unsubscribe();
+            transactionsSubscription.dispose();
         }
 
         transactionsSubscription = pendingTransactions()
@@ -277,7 +279,7 @@ public class AKwizzadBase {
 
         //request add again after some delay
         if (stateSubscription != null) {
-            stateSubscription.unsubscribe();
+            stateSubscription.dispose();
         }
         if(preloadAdsAutomatically) {
             stateSubscription = placementModel.observeState()
@@ -338,11 +340,10 @@ public class AKwizzadBase {
                     return api.send(requestEvent);
                 })
                 .observeOn(schedulers.mainThread())
-                .subscribe(new Subscriber<AEvent>() {
-                    @Override
-                    public void onCompleted() {
+                .subscribe(new Observer<AEvent>() {
 
-                    }
+                    @Override
+                    public void onSubscribe(@NonNull Disposable d) {}
 
                     @Override
                     public void onError(Throwable error) {
@@ -366,6 +367,9 @@ public class AKwizzadBase {
                     public void onNext(AEvent event) {
                         QLog.d("EVENT " + event.type);
                     }
+
+                    @Override
+                    public void onComplete() {}
                 });
     }
 
@@ -376,7 +380,7 @@ public class AKwizzadBase {
                 + " seconds");
 
         if(rerequestSubscription != null) {
-            rerequestSubscription.unsubscribe();
+            rerequestSubscription.dispose();
         }
 
         rerequestSubscription = Observable.just(placementId)
@@ -466,7 +470,7 @@ public class AKwizzadBase {
 
 
             if (lastSubscription != null) {
-                lastSubscription.unsubscribe();
+                lastSubscription.dispose();
                 lastSubscription = null;
             }
             lastSubscription = placementModel.state.observe().subscribe(state -> {
@@ -488,7 +492,7 @@ public class AKwizzadBase {
                         currentWebView = null;
                     }
                     if (lastSubscription != null) {
-                        lastSubscription.unsubscribe();
+                        lastSubscription.dispose();
                         lastSubscription = null;
                     }
                 }
