@@ -11,11 +11,11 @@
 # Prerequisites
 
 - You already have your own KWIZZAD API KEY and PLACEMENT ID. If not, please contact TVSMILES per [E-Mail](mailto:it@tvsmiles.de) and we will register your APP.
-- Apps integrating KWIZZAD SDK require Android 4.1 (API level 16 Jelly Bean) or higher to run. Advertising will only be played starting from Android 4.3 (API Level 18 Jelly Bean) or higher.
+- Apps integrating KWIZZAD SDK require Android 4.1 (API level 16 Jelly Bean) or higher to run. Advertising will only be played starting from Android 4.4 (API Level 19 Kitkat) or higher.
 - Using gradle build system
 - Supports either JDK7 or JDK8
 - Does not support new Jack compiler
-- A fully working example can be found at: [https://github.com/kwizzad/kwizzad-android](https://github.com/kwizzad/kwizzad-android-example)
+- A fully working example can be found at: [https://github.com/kwizzad/kwizzad-android](https://github.com/kwizzad/kwizzad-android)
 
 **ProGuard configuration**
 
@@ -131,97 +131,87 @@ public void onCreate(@Nullable Bundle savedInstanceState) {
 }
 ```
 
+Notice that by default ads are rerequested immediatelly after getting DISMISSED state, and after several minutes for AD_READY and NO_FILL states. If you want to override this behaviour you can use ```Kwizzad.setPreloadAdsAutomatically(false)``` to disable standart preloading behaviour
+
+
 
 
 ## Step 2: Prepare and show an ad
 
-The KWIZZAD SDK maintains an internal lifecycle for each ad and allows you to control the exact behaviour depending on your needs. Here is a simple example implementation that will prepare and show a KWIZZAD from a Fragment following an ad request.
+The KWIZZAD SDK maintains an internal lifecycle for each ad and allows you to control the exact behaviour depending on your needs. Here is a simple example implementation that will prepare a KWIZZAD to show an ad.
 
-KWIZZAD uses [reactivex](http://reactivex.io/) to implement an Observer pattern and manage the ad's lifecycle. You do not need any experience with reactivex as every aspect is taken care of.  
-
-Kwizzad.createAdViewBuilder() supports both Fragment implementations depending on your needs:
-
-1. supportDialogFragment() creates a fragment based on android.support.v4.app.DialogFragment
-2. dialogFragment() creates a fragment based on android.app.DialogFragment
 
 ```java
 @Override
-public void onResume() {
-    super.onResume();
-
-    /**
-     * listen to value, bound to the tag "this"
-     */
-    RxSubscriber.subscribe(this, Kwizzad.placementState(placementId).observe(), placementState -> {
-        switch (placementState.adState) {
+public void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    ...
+    Kwizzad.getPlacementModel(placementId).setPlacementStateCallback(state -> {
+        switch (state) {
             case NOFILL:
-                // no ad for placement. close fragment.
-                try {
-                    dismiss();
-                } catch (Exception ignored) {
-                }
+                //no ad for placement, show error
+                new AlertDialog.Builder(this)
+                    .setTitle("NOFILL")
+                    .setMessage("there is no ad. sorry")
+                    .setNeutralButton(android.R.string.ok, (dialog, which) -> {})
+                    .create()
+                    .show();
                 break;
             case RECEIVED_AD:
                 // ad received, now prepare resources in the background
-                Kwizzad.prepare("placementId as provided by KWIZZAD publisher integration team", getActivity());
+                Kwizzad.prepare(placementId, activity);
                 break;
             case AD_READY:
                 // ad ready to show for placement
-                Kwizzad
-                        .createAdViewBuilder()
-                        /*
-                         * dont forget to set the placement id
-                         */
-                        .setPlacementId(placementId)
-                        /*
-                         * set any custom parameters like transactionId, aff_sub, tracking token, ...
-                         * These will be available later on in callbacks to identify the originating ad session.
-                         */
-                        .setCustomParameter("foo", "bar")
-                        .setCustomParameter("transactionId", "0815")
-                        /*
-                         * build it
-                         */
-                         .dialogFragment()
-                        /*
-                         * and show it
-                         */
-                            .show(getFragmentManager(), "ad");
+                rewardsAreShown = false;
                 break;
             case DISMISSED:
-                // finished showing the ad for placement. close fragment.
-                try {
-                    dismiss();
-                } catch (Exception ignored) {
-                }
+                //ad dismissed
                 break;
             default:
-                // loading the ad for placement.
                 break;
         }
     });
 }
 
 @Override
-public void onPause() {
-    super.onPause();
-
-
-    /**
-     * unsubscribe everything on the tag "this"
-     */
-    RxSubscriber.unsubscribe(this);
-}
-
-@Override
 public void onDestroy() {
     super.onDestroy();
-
+	Kwizzad.getPlacementModel(placementId).setPlacementStateCallback(null);
     Kwizzad.close(placementId);
 }
 ```
 
+Now to show the ad you have to use ```Kwizzad.createAdViewBuilder()```, that supports both Fragment implementations depending on your needs:
 
+1. supportDialogFragment() creates a fragment based on android.support.v4.app.DialogFragment
+2. dialogFragment() creates a fragment based on android.app.DialogFragment
+
+```java
+    Map<String, Object> customParams = new HashMap<>();
+    customParams.put("foo", "bar");
+    Kwizzad.createAdViewBuilder()
+        /*
+        * dont forget to set the placement id
+        */
+        .setPlacementId(etPlacement.getText().toString())
+        /*
+        * you can set custom parameters like this
+        */
+        .setCustomParameters(customParams)
+        /*
+        * or like this
+        */
+        .setCustomParameter("bar", "foo")
+        /*
+        * build it using dialog or support dialog
+        */
+        .dialogFragment() //.supportDialogFragment()
+        /*
+        * and show it
+        */
+        .show(getFragmentManager(), "ad");
+```
 
 # Step 3: Handle callback events for completed ads
 
@@ -229,92 +219,67 @@ Once the user successfully completes a rewarded KWIZZAD you will receive a callb
 
 Callbacks can be handled both in app or using KWIZZADs server2server postback configuration as an HTTP GET request to a URL of your choice.
 
-In order to receive callbacks inapp you must subscribe to the Kwizzad.pendingTransactions() observable or use Kwizzad.setPendingTransactionsCallback() to receive notifications on new callbacks. If you are only using server2server callbacks you do not have to implement this.
+In order to receive callbacks inapp use ```Kwizzad.setPendingTransactionsCallback(...)```. If you are only using server2server callbacks you do not have to implement this.
 
 There are two types of events available and defined in com.kwizzad.model.Type:
 
-1. CALL2ACTION: Notification is sent immediately if a user played a WKIZZAD. This is relevant for instant-rewards with CPM billing based publisher agreements.
+1. CALL2ACTION: Notification is sent immediately if a user played a KWIZZAD. This is relevant for instant-rewards with CPM billing based publisher agreements.
 2. CALLBACK: Notification is sent later if an advertising partner confirms a transaction. This is the main billing event.
 
 ```java
 import com.kwizzad.Kwizzad;
 import com.kwizzad.model.PendingEvent;
-import com.kwizzad.property.RxSubscriber;
 
 public class MainActivity extends AppCompatActivity {
     @Override
-protected void onResume() {
-    super.onResume();
-
-    Kwizzad.resume(this);
-
-    nextPendingTransaction();
-}
-
-private void nextPendingTransaction() {
-    pendingSubscription = Kwizzad.pendingTransactions()
-            .filter(openTransactions -> openTransactions!=null && openTransactions.size()>0)
-            .flatMap(openTransactions -> {
-                // only return sth if we find an active one
-                for(OpenTransaction openTransaction : openTransactions)
-                    if(openTransaction.state == OpenTransaction.State.ACTIVE)
-                        return Observable.just(openTransaction);
-
-                //nothing
-                return Observable.empty();
-            })
-            .first()
-            .subscribe(openTransaction -> {
-                QLog.d("should show event " + openTransaction);
-                showEvent(openTransaction);
-            });
-}
-
-private void showEvent(final OpenTransaction openTransaction) {
-
-    Reward reward = openTransaction.reward;
-    if (reward != null) {
-        // Here you get the reward amount for the user.
-        int rewardAmount = reward.amount;
-        String rewardCurrency = reward.currency; // e.g. chips, coins, loot, smiles as configued by KWIZZAD.
+    protected void onResume() {
+        super.onResume();
 
         /*
+        * add callback for rewards
+        */
+        Kwizzad.setPendingTransactionsCallback(transactions -> {
+            if(transactions != null && transactions.size() > 0) {
+                showEvents(transactions);
+            }
+        });
 
-        The following part is optional: If you want to know which type of reward the notification was about
-        How to distinguish between Call2Action (Instant-Reward) and Callback (full billing)
-
-        Reward.Type rewardType = reward.type; // CALL2ACTIONSTARTED, CALLBACK, GOALREACHED
-
-        if (openTransaction.reward.type.equals(Reward.Type.CALL2ACTIONSTARTED)) { ... }
-
-        else if (openTransaction.reward.type.equals(Reward.Type.CALLBACK)) { ... }
-
-      */
+        Kwizzad.resume(this);
     }
 
-    new AlertDialog.Builder(this)
-            .setTitle("Transaction!")
-            .setMessage(openTransaction.toString())
+    private void showEvents(Collection<OpenTransaction> openTransactions) {
+        List<Reward> rewards = new ArrayList<>();
+        for (OpenTransaction transaction :
+            openTransactions) {
+            rewards.add(transaction.reward);
+        }
+
+        //test for dialog, explainig rewards
+        String message = Reward.makeConfirmationTextForRewards(this, rewards);
+
+        new AlertDialog.Builder(this)
+            .setTitle("New rewards!")
+            .setMessage(message)
             .setPositiveButton(android.R.string.ok,
-                    (dialog, whichButton) -> Kwizzad.completeTransaction(openTransaction)
-            )
-            .setNegativeButton(android.R.string.cancel,
-                    (dialog, whichButton) -> {
-                        dialog.dismiss();
-                    }
-            )
-            // get the next one
-            .setOnDismissListener(dialog -> nextPendingTransaction())
+                (dialog, whichButton) -> Kwizzad.completeTransactions(openTransactions))
             .create()
             .show();
-}
+    }
 
-@Override
-protected void onPause() {
-    super.onPause();
-    RxSubscriber.unsubscribe(this);
-    if(pendingSubscription!=null) {
-        pendingSubscription.unsubscribe();
+    @Override
+    protected void onPause() {
+        super.onPause();
+            Kwizzad.setPendingTransactionsCallback(null);
     }
 }
+```
+
+# Step 4: Handle errors in placements
+
+Once you receive an error inside a placement, your app will be notified in error callback. As soon as you receive an error, the ads state will be set to DISMISSED. To set error callback use
+
+```java
+    Kwizzad.getPlacementModel(placementId).setErrorCallback(throwable -> {
+        Log.e(TAG, throwable.getMessage());
+    });
 ```

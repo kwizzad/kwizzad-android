@@ -1,5 +1,7 @@
 package com.kwizzad.model;
 
+import com.kwizzad.AbstractPlacementModel;
+import com.kwizzad.PlacementModel;
 import com.kwizzad.db.PersistedProperty;
 import com.kwizzad.property.Property;
 
@@ -15,7 +17,7 @@ public class Model {
     public volatile String advertisingId;
     public Property<Boolean> initialized = Property.create(false);
 
-    private Map<String, PlacementModel> placements = new HashMap<>();
+    private Map<String, AbstractPlacementModel> placements = new HashMap<>();
 
     public Property<Set<OpenTransaction>> openTransactions = Property.create(new HashSet<>());
 
@@ -31,7 +33,7 @@ public class Model {
         return "https://" + apiKey.substring(0, 7) + "-" + Integer.toString(serverIndex) +  ".api.kwizzad.com/api/sdk/";
     }
 
-    public PlacementModel getPlacement(String placementId) {
+    public AbstractPlacementModel getPlacement(String placementId) {
         if (!placements.containsKey(placementId)) {
             placements.put(placementId, new PlacementModel());
         }

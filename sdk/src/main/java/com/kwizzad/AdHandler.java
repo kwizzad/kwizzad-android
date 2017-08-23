@@ -18,9 +18,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import rx.Observable;
-import rx.Subscription;
-import rx.android.schedulers.AndroidSchedulers;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 
 abstract class AdHandler {
 
@@ -38,8 +38,8 @@ abstract class AdHandler {
     private TextView forfeitButton;
     private TextView claimButton;
     private TextView closeDialogTitle;
-    private IPlacementModel placement;
-    private Subscription lastTick;
+    private AbstractPlacementModel placement;
+    private Disposable lastTick;
     private boolean call2ActionClicked;
 
     public abstract void close();
@@ -233,7 +233,7 @@ abstract class AdHandler {
                         || placement.getAdState() == AdState.GOAL_REACHED) {
 
                     if (lastTick != null)
-                        lastTick.unsubscribe();
+                        lastTick.dispose();
 
                     progress.setVisibility(View.GONE);
 
@@ -263,7 +263,7 @@ abstract class AdHandler {
                         || placement.getAdState() == AdState.GOAL_REACHED) {
 
                     if (lastTick != null)
-                        lastTick.unsubscribe();
+                        lastTick.dispose();
 
                     progress.setVisibility(View.GONE);
                 }

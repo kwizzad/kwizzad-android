@@ -15,13 +15,13 @@ import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.kwizzad.api.HttpErrorResponseException;
+import com.kwizzad.api.QueryParams;
 import com.kwizzad.api.KwizzadApi;
 import com.kwizzad.log.DebugLoggerImplementation;
 import com.kwizzad.log.QLog;
 import com.kwizzad.model.AdState;
 import com.kwizzad.model.Model;
 import com.kwizzad.model.OpenTransaction;
-import com.kwizzad.model.PlacementModel;
 import com.kwizzad.model.events.AEvent;
 import com.kwizzad.model.events.AdRequestEvent;
 import com.kwizzad.model.events.AdResponseEvent;
@@ -43,37 +43,33 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import rx.Observable;
-import rx.Subscriber;
-import rx.Subscription;
-import rx.subjects.PublishSubject;
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.disposables.Disposable;
 
 public class AKwizzadBase {
 
     private static final long TIMEOUT_REQUESTING_AD = 1000 * 10;
 
     private final ISchedulers schedulers;
-    public final KwizzadApi api;
     private final Model model;
 
-    private final PublishSubject<Throwable> errors = PublishSubject.create();
     private final Context applicationContext;
     private WebView currentWebView;
     private String currentPlacement;
 
-    private Subscription lastSubscription;
-    private Subscription errorSubscription;
-    private Subscription stateSubscription;
-    private Subscription transactionsSubscription;
-    private Subscription rerequestSubscription;
+    private Disposable lastSubscription;
+    private Disposable stateSubscription;
+    private Disposable transactionsSubscription;
+    private Disposable rerequestSubscription;
 
     private Property<List<Object>> scheduledTrackingEventsProperty = Property.create(new ArrayList<>());
 
     public Boolean preloadAdsAutomatically = true;
 
-    public AKwizzadBase(Model model, ISchedulers schedulers, KwizzadApi api, Configuration configuration) {
+    public AKwizzadBase(Model model, ISchedulers schedulers, Configuration configuration) {
         this.schedulers = schedulers;
-        this.api = api;
         this.model = model;
         this.applicationContext = configuration.context;
 
@@ -93,34 +89,28 @@ public class AKwizzadBase {
 
 
     public void start() {
-        api.observe(OpenTransactionsEvent.class)
+        KwizzadApi.getInstance().observe(OpenTransactionsEvent.class)
                 .observeOn(schedulers.mainThread())
                 .subscribe(openTransactionsEvent -> {
 
                     QLog.d("got open transactions " + openTransactionsEvent);
 
                     Set<OpenTransaction> newSet = new HashSet<>();
-                   /* for (OpenTransaction cb : model.openTransactions.get()) {
-                        if (openTransactionsEvent.transactionList.contains(cb)) {
-                            newSet.add(cb);
-                        }
-                    }*/
-
                     newSet.addAll(openTransactionsEvent.transactionList);
+                    newSet.removeAll(model.openTransactions.get());
 
-                    QLog.d("size " + newSet.size());
 
-                    if (newSet.size() > 0 || newSet.size() != model.openTransactions.get().size()) {
+                    if (newSet.size() > 0) {
                         QLog.d("setting transactions");
                         model.openTransactions.set(newSet);
                     }
 
                 });
 
-        api.observe(AdResponseEvent.class)
+        KwizzadApi.getInstance().observe(AdResponseEvent.class)
                 .observeOn(schedulers.mainThread())
                 .subscribe((event) -> {
-                    final PlacementModel m = model.getPlacement(event.placementId);
+                    final AbstractPlacementModel m = model.getPlacement(event.placementId);
                     if (m.getAdState() == AdState.REQUESTING_AD) {
 
                         if (BuildConfig.DEBUG && model.overrideWeb != null) {
@@ -135,13 +125,13 @@ public class AKwizzadBase {
                     }
                 });
 
-        api.observe(NoFillEvent.class)
+        KwizzadApi.getInstance().observe(NoFillEvent.class)
                 .observeOn(schedulers.mainThread())
                 .subscribe(event -> {
-                    final PlacementModel m = model.getPlacement(event.placementId);
+                    final AbstractPlacementModel m = model.getPlacement(event.placementId);
                     if (m.getAdState() == AdState.REQUESTING_AD) {
                         m.setAdresponse(null);
-                        m.retryAfter = event.retryAfter;
+                        m.setRetryAfter(event.retryAfter);
                         m.setAdState(AdState.NOFILL);
                     }
                 });
@@ -163,10 +153,9 @@ public class AKwizzadBase {
                     return Observable.just(new ArrayList<>(eventsSending));
                 })
                .subscribe(objects -> {
-                    Observable
-                            .from(objects)
+                    Observable.fromIterable(objects)
                             .observeOn(schedulers.io())
-                            .flatMap(api::send)
+                            .flatMap(KwizzadApi.getInstance()::send)
                             .observeOn(schedulers.mainThread())
                             // also main thread!
                             .retryWhen(errors -> errors.flatMap(error -> {
@@ -176,9 +165,22 @@ public class AKwizzadBase {
                                 QLog.e("error sending events: " + error.getMessage());
                                 return defaultErrorHandler(error);
                             }))
-                            .subscribe(new Subscriber<AEvent>() {
+                            .subscribe(new Observer<AEvent>() {
+
                                 @Override
-                                public void onCompleted() {
+                                public void onNext(AEvent aEvent) {}
+
+                                @Override
+                                public void onSubscribe(@NonNull Disposable d) {}
+
+                                @Override
+                                public void onError(Throwable error) {
+                                    QLog.e(error, "error sending tracking events");
+                                   // errors.onNext(error); dont handle errors for now, but need to find a way to handle them in placement model
+                                }
+
+                                @Override
+                                public void onComplete() {
                                     if (objects.size() > 0) {
                                         List<Object> events = scheduledTrackingEventsProperty.get();
                                         events.removeAll(objects);
@@ -186,17 +188,6 @@ public class AKwizzadBase {
                                         scheduledTrackingEventsProperty.set(events);
                                         QLog.d("successfully sent " + eventsSending.size() + " tracking events");
                                     }
-                                }
-
-                                @Override
-                                public void onError(Throwable error) {
-                                    QLog.e(error, "error sending tracking events");
-                                    errors.onNext(error);
-                                }
-
-                                @Override
-                                public void onNext(AEvent aEvent) {
-
                                 }
                             });
                 });
@@ -223,34 +214,25 @@ public class AKwizzadBase {
         }
     }
 
-    public Observable<Throwable> observeErrors() {
-        return errors;
-    }
-
-    public void setErrorCallback(KwizzadErrorCallback errorCallback) {
-        if(errorSubscription != null) {
-            errorSubscription.unsubscribe();
-        }
-
-        errorSubscription = errors.subscribe(throwable -> errorCallback.onError(throwable));
-    }
 
 
     public void setPendingTransactionsCallback(PendingTransactionsCallback callback) {
         if(transactionsSubscription != null) {
-            transactionsSubscription.unsubscribe();
+            transactionsSubscription.dispose();
         }
 
-        transactionsSubscription = pendingTransactions()
-                                        .subscribe(callback::callback);
+        if(callback != null) {
+            transactionsSubscription = pendingTransactions()
+                    .subscribe(callback::callback);
+        }
     }
 
     public void requestAd(String placementId) {
         QLog.d("request ad for " + placementId);
 
-        final PlacementModel placementModel = model.getPlacement(placementId);
+        final AbstractPlacementModel placementModel = model.getPlacement(placementId);
 
-        PlacementModel.State placementState = placementModel.state.get();
+        AbstractPlacementModel.State placementState = placementModel.getState();
         switch (placementState.adState) {
             case REQUESTING_AD:
                 // ignoring new request
@@ -267,8 +249,8 @@ public class AKwizzadBase {
                 return;
             case NOFILL:
                 Date now = new Date();
-                if (placementModel.retryAfter != null && placementModel.retryAfter.after(now)) {
-                    QLog.i("no fill said to retry after " + placementModel.retryAfter + " but we have " + now + ". ignoring request for now.");
+                if (placementModel.getRetryAfter() != null && placementModel.getRetryAfter().after(now)) {
+                    QLog.i("no fill said to retry after " + placementModel.getRetryAfter() + " but we have " + now + ". ignoring request for now.");
                     return;
                 }
                 break;
@@ -277,7 +259,7 @@ public class AKwizzadBase {
 
         //request add again after some delay
         if (stateSubscription != null) {
-            stateSubscription.unsubscribe();
+            stateSubscription.dispose();
         }
         if(preloadAdsAutomatically) {
             stateSubscription = placementModel.observeState()
@@ -285,13 +267,15 @@ public class AKwizzadBase {
                     .subscribe(state -> {
                         switch (state.adState) {
                             case NOFILL:
-                                requestAdAfterDelay(placementId, (placementModel.retryAfter.getTime() - System.currentTimeMillis()));
+                                requestAdAfterDelay(placementId, (placementModel.getRetryAfter().getTime() - System.currentTimeMillis()));
                                 break;
                             case RECEIVED_AD:
-                                requestAdAfterDelay(placementId, placementModel.getAdResponse().timeToExpireMillis());
+                                requestAdAfterDelay(placementId, placementModel.getAdResponse().getExpiresIn());
                                 break;
                             case DISMISSED:
-                                requestAdAfterDelay(placementId, 0);
+                                if (model.getPlacement(placementId).getAdResponse() != null) {
+                                    requestAdAfterDelay(placementId, 0);
+                                }
                                 break;
                             default:
                                 break;
@@ -299,55 +283,47 @@ public class AKwizzadBase {
                     });
         }
 
-
         placementModel.setAdState(AdState.REQUESTING_AD);
-
-        final AdRequestEvent requestEvent = new AdRequestEvent(applicationContext);
-        requestEvent.placementId = placementId;
 
         Observable
                 .fromCallable(() -> {
                     QLog.d("checking idfa");
-                    try {
-                        return AdvertisingIdClient.getAdvertisingIdInfo(applicationContext);
-                    } catch (Exception e) {
-                        QLog.e(e.getMessage());
+
+                    AdvertisingIdClient.Info info = AdvertisingIdClient.getAdvertisingIdInfo(applicationContext);
+                    if (info == null || info.isLimitAdTrackingEnabled()) {
+                        QLog.d("no ad tracking enabled :(");
+                        model.advertisingId = null;
+                    } else {
+                        model.advertisingId = info.getId();
                     }
-                    return null;
+
+                    AdRequestEvent requestEvent = new AdRequestEvent(applicationContext);
+                    requestEvent.placementId = placementId;
+                    requestEvent.idfa = model.advertisingId;
+                    requestEvent.userDataModel = model.userDataModel.realClone();
+                    return requestEvent;
+                })
+                .flatMap(requestEvent -> {
+                    QLog.d("requesting the ad for " + placementId);
+                    return KwizzadApi.getInstance().send(requestEvent);
                 })
                 .subscribeOn(schedulers.io())
                 .observeOn(schedulers.mainThread())
-                .flatMap(info -> {
-                    try {
-                        if (info == null || info.isLimitAdTrackingEnabled()) {
-                            QLog.d("no ad tracking enabled :(");
-                            model.advertisingId = null;
-                        } else {
-                            model.advertisingId = info.getId();
-                        }
-                    } catch (Exception e) {
-                        QLog.e(e.getMessage());
-                    }
-                    return Observable.just(null);
-                })
-                .observeOn(schedulers.io())
-                .flatMap(foo -> {
-                    QLog.d("requesting the ad for " + placementId);
-                    requestEvent.idfa = model.advertisingId;
-                    requestEvent.userDataModel = model.userDataModel.realClone();
-                    return api.send(requestEvent);
-                })
-                .observeOn(schedulers.mainThread())
-                .subscribe(new Subscriber<AEvent>() {
-                    @Override
-                    public void onCompleted() {
+                .subscribe(new Observer<AEvent>() {
 
-                    }
+                    @Override
+                    public void onSubscribe(@NonNull Disposable d) {}
 
                     @Override
                     public void onError(Throwable error) {
                         QLog.e(error, "error requesting ad");
-                        errors.onNext(error);
+
+                        if (placementModel.getAdState() == AdState.REQUESTING_AD) {
+                            placementModel.notifyError(error);
+                            return;
+                        }
+
+                        placementModel.notifyError(error);
                         if (error instanceof IOException) {
                             return;
                         }
@@ -357,15 +333,16 @@ public class AKwizzadBase {
                         if (error instanceof GooglePlayServicesRepairableException) {
                             // we dont handle for now
                         }
-                        if (placementModel.getAdState() == AdState.REQUESTING_AD) {
-                            placementModel.setAdState(AdState.DISMISSED);
-                        }
+
                     }
 
                     @Override
                     public void onNext(AEvent event) {
                         QLog.d("EVENT " + event.type);
                     }
+
+                    @Override
+                    public void onComplete() {}
                 });
     }
 
@@ -376,7 +353,7 @@ public class AKwizzadBase {
                 + " seconds");
 
         if(rerequestSubscription != null) {
-            rerequestSubscription.unsubscribe();
+            rerequestSubscription.dispose();
         }
 
         rerequestSubscription = Observable.just(placementId)
@@ -390,8 +367,9 @@ public class AKwizzadBase {
                 .connect();
     }
 
+
     public void prepare(String placementId, Activity activity) {
-        final PlacementModel placementModel = model.getPlacement(placementId);
+        final AbstractPlacementModel placementModel = model.getPlacement(placementId);
 
         if (activity == null || activity.getBaseContext() == null) {
             QLog.e("Application Lifecycle Error: Can only prepare ads if Activity and Context initialized!");
@@ -402,8 +380,8 @@ public class AKwizzadBase {
 
             QLog.d("preparing " + placementId);
 
-            placementModel.currentStep = 0;
-            placementModel.retryAfter = null;
+            placementModel.setCurrentStep(0);
+            placementModel.setRetryAfter(null);
 
             clearWebView();
 
@@ -466,10 +444,10 @@ public class AKwizzadBase {
 
 
             if (lastSubscription != null) {
-                lastSubscription.unsubscribe();
+                lastSubscription.dispose();
                 lastSubscription = null;
             }
-            lastSubscription = placementModel.state.observe().subscribe(state -> {
+            lastSubscription = placementModel.observeState().subscribe(state -> {
                 if (state.adState == AdState.DISMISSED) {
                     if (currentWebView != null) {
 
@@ -488,24 +466,26 @@ public class AKwizzadBase {
                         currentWebView = null;
                     }
                     if (lastSubscription != null) {
-                        lastSubscription.unsubscribe();
+                        lastSubscription.dispose();
                         lastSubscription = null;
                     }
                 }
             });
 
-            new PlacementJavascriptInterface(currentWebView, placementModel, this, model);
+            new PlacementJavascriptInterface(currentWebView, placementModel, this);
 
             placementModel.setAdState(AdState.LOADING_AD);
 
-            QLog.d("load url " + placementModel.getAdResponse().url);
+            String urlWithKometParams = QueryParams.addCometQueryParams(placementModel.getAdResponse().url, model, applicationContext);
+            QLog.d("url : " + placementModel.getAdResponse().url + ", url with additional komet params : " + urlWithKometParams);
 
             currentWebView.loadUrl(placementModel.getAdResponse().url);
             final AdResponseEvent adresponse = placementModel.getAdResponse();
             new Handler().postDelayed(() -> {
                 if (placementModel.getAdState() == AdState.LOADING_AD && adresponse == placementModel.getAdResponse()) {
                     QLog.w("ad loading timeout reached. this shouldnt happen, but it did. cancelling ad :(");
-                    placementModel.setAdState(AdState.DISMISSED);
+                    placementModel.setAdresponse(null);
+                    placementModel.notifyError("ad loading timeout reached. this shouldnt happen, but it did. cancelling ad :(");
                 }
             }, 22000);
         } else {
@@ -534,11 +514,11 @@ public class AKwizzadBase {
     public void start(String placementId, ViewGroup frame, Map<String, Object> customParameters) {
         QLog.d("starting " + placementId);
 
-        final PlacementModel placementModel = model.getPlacement(placementId);
+        final AbstractPlacementModel placementModel = model.getPlacement(placementId);
 
-        if (placementModel.state.get().adState != AdState.AD_READY) {
-            QLog.e("wrong state of ad: " + placementModel.state.get() + ", cancelling ad alltogether!");
-            placementModel.setAdState(AdState.DISMISSED);
+        if (placementModel.getState().adState != AdState.AD_READY) {
+            QLog.e("wrong state of ad: " + placementModel.getState() + ", cancelling ad alltogether!");
+            placementModel.notifyError("wrong state of ad: " + placementModel.getState() + ", cancelling ad alltogether!");
             return;
         }
 
@@ -552,7 +532,7 @@ public class AKwizzadBase {
     public void close(String placementId) {
         QLog.d("closing " + placementId);
 
-        final PlacementModel placementModel = model.getPlacement(placementId);
+        final AbstractPlacementModel placementModel = model.getPlacement(placementId);
 
         AdState adState = placementModel.getAdState();
 
@@ -560,7 +540,7 @@ public class AKwizzadBase {
             sendEvents(
                     AdTrackingEvent
                             .create("adDismissed", placementModel.getAdResponse().adId)
-                            .internalParameter("step", placementModel.currentStep)
+                            .internalParameter("step", placementModel.getCurrentStep())
             );
         }
 
@@ -631,7 +611,7 @@ public class AKwizzadBase {
         send.transactionId = transaction.transactionId;
 
         // TODO: queue
-        api.send(send)
+        KwizzadApi.getInstance().send(send)
                 .subscribeOn(schedulers.io())
                 .observeOn(schedulers.mainThread())
                 .retryWhen(errors -> errors.flatMap(error -> {

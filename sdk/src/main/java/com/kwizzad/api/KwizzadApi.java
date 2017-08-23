@@ -1,6 +1,7 @@
 package com.kwizzad.api;
 
 import com.kwizzad.ISchedulers;
+import com.kwizzad.Kwizzad;
 import com.kwizzad.db.DB;
 import com.kwizzad.db.FromJson;
 import com.kwizzad.db.ToJson;
@@ -28,25 +29,32 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import rx.Observable;
-import rx.subjects.PublishSubject;
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
 
 public class KwizzadApi {
 
     private static final int MAX_RETRIES_COUNT = 10;
 
-    private final Model model;
+    private static KwizzadApi instance;
+
+    private Model model;
     private boolean logHeaders = true;
-    private ISchedulers schedulers;
 
     private int[] retryIntervals = {1, 5, 10, 60, 360, 1440, 1440, 1440, 1440, 1440};
 
 
     private final PublishSubject<AEvent> eventsSubject = PublishSubject.create();
 
-    public KwizzadApi(ISchedulers schedulers, Model model) {
-        this.model = model;
-        this.schedulers = schedulers;
+    private KwizzadApi() {
+        // Exists only to defeat instantiation.
+    }
+
+    public static KwizzadApi getInstance() {
+        if(instance == null) {
+            instance = new KwizzadApi();
+        }
+        return instance;
     }
 
     public <T extends AEvent> Observable<T> observe(Class<T> clazz) {
@@ -173,7 +181,7 @@ public class KwizzadApi {
                             }
                         }
 
-                        return Observable.from(events);
+                        return Observable.fromIterable(events);
                     } catch (Exception ignored) {
                         QLog.v(ignored);
                     } finally {
@@ -359,5 +367,13 @@ public class KwizzadApi {
             e.printStackTrace();
         }
 
+    }
+
+    public void setModel(Model model) {
+        this.model = model;
+    }
+
+    public void init(Model model) {
+        this.model = model;
     }
 }

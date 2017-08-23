@@ -23,6 +23,7 @@ public class AdResponseEvent extends AAdEvent {
     private String headLine;
     private String teaser;
     private String brand;
+    private long expiresIn;
 
     private int estimatedTimeForPlayingACampaign = 20 ;// in seconds
 
@@ -61,6 +62,7 @@ public class AdResponseEvent extends AAdEvent {
         expiry = Util.fromISO8601(o.getString("expiry"));
         url = o.getString("url");
         closeButtonVisibility = CloseType.fromKey(o.optString("closeButtonVisibility"));
+        expiresIn = o.getLong("expiresIn");
 
 
         goalUrlPattern = o.optString("goalUrlPattern", null);
@@ -105,6 +107,10 @@ public class AdResponseEvent extends AAdEvent {
 
     public String getBrand() {
         return brand;
+    }
+
+    public long getExpiresIn() {
+        return expiresIn;
     }
 
     public Boolean adWillExpireSoon(){

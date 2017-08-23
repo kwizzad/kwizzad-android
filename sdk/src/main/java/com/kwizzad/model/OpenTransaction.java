@@ -34,11 +34,12 @@ public class OpenTransaction {
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof OpenTransaction) {
-            OpenTransaction other = (OpenTransaction) o;
-            return other.adId.equals(adId) && other.transactionId.equals(transactionId);
-        }
-        return false;
+        if (this == o) return true;
+        if (o == null) return false;
+        if (getClass() != o.getClass()) return false;
+
+        OpenTransaction other = (OpenTransaction) o;
+        return other.adId.equals(adId) && other.transactionId.equals(transactionId);
     }
 
     @Override

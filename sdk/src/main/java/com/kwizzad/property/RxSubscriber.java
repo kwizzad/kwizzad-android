@@ -5,17 +5,17 @@ import com.kwizzad.log.QLog;
 import java.util.HashMap;
 import java.util.Map;
 
-import rx.Observable;
-import rx.Subscriber;
-import rx.Subscription;
-import rx.functions.Action1;
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
 
 /**
  * Global Singleton Binder helper class, that allows you to subscribe/unsubscribe based on tags.
  * The tag can be any object, you want, so grouping does not pose a problem. What makes the most sense is up to you.
  *
- * @see rx.Subscription
- * @see rx.Observable#subscribe()
+ * @see io.reactivex.disposables.Disposable
+ * @see io.reactivex.Observable#subscribe()
  */
 public final class RxSubscriber {
 
@@ -24,16 +24,16 @@ public final class RxSubscriber {
     private RxSubscriber() {
     }
 
-    public static <T> Subscription subscribe(Object tag, Observable<? extends T> source, Action1<? super T> target) {
+    public static <T> Disposable subscribe(Object tag, Observable<? extends T> source, Consumer<? super T> target) {
         return new SubscriptionWrapper(getSubscriber(tag).subscribe(source, target, QLog::e), tag);
     }
 
-    public static <T> Subscription subscribe(Object tag, Observable<? extends T> source, Action1<? super T> onNext, Action1<Throwable> error) {
+    public static <T> Disposable subscribe(Object tag, Observable<? extends T> source, Consumer<? super T> onNext, Consumer<Throwable> error) {
         return new SubscriptionWrapper(getSubscriber(tag).subscribe(source, onNext, error), tag);
     }
 
-    public static <T> Subscription subscribe(Object tag, Observable<? extends T> source, Subscriber<T> subscriber) {
-        return new SubscriptionWrapper(getSubscriber(tag).subscribe(source, subscriber), tag);
+    public static <T> void subscribe(Object tag, Observable<? extends T> source, Observer<T> subscriber) {
+        getSubscriber(tag).subscribe(source, subscriber);
     }
 
     private static LSubscriber getSubscriber(Object tag) {
@@ -45,7 +45,7 @@ public final class RxSubscriber {
         return b;
     }
 
-    public static void unsubscribe(Object tag, Subscription subscription) {
+    public static void unsubscribe(Object tag, Disposable subscription) {
         LSubscriber b = getSubscriber(tag);
         b.unsubscribe(subscription);
         if (b.isEmpty()) {

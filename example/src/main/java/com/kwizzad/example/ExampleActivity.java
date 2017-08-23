@@ -15,7 +15,6 @@ import android.widget.TextView;
 import com.kwizzad.Kwizzad;
 import com.kwizzad.model.OpenTransaction;
 import com.kwizzad.model.events.Reward;
-import com.kwizzad.property.RxSubscriber;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import rx.Subscription;
 
 
 /**
@@ -43,8 +41,6 @@ public class ExampleActivity extends AppCompatActivity {
     //we need this param to avoid showing rewards dialog several time
     private boolean rewardsAreShown = false;
 
-    private Subscription pendingSubscription;
-    private Subscription stateSubscription;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -56,32 +52,9 @@ public class ExampleActivity extends AppCompatActivity {
         Kwizzad.setPreloadAdsAutomatically(false);
 
         /*
-         * subscribe to errors
+         * set callback to state changes
          */
-        RxSubscriber.subscribe(this, Kwizzad.observeErrors(), throwable -> {
-            tvLog.setText("observed error " + throwable.getMessage() + " \n" + tvLog.getText());
-        });
-
-        /*
-         * or set an error callback
-         */
-        Kwizzad.setErrorsCallback(throwable -> {
-            tvLog.setText("got error " + throwable.getMessage() + " \n" + tvLog.getText());
-        });
-
-        /*
-         * subscribe to state changes
-         */
-        resubscribeToStateChanges();
-
-        /*
-         *  or set callback for state changes
-         */
-        Kwizzad.getPlacementModel(etPlacement.getText().toString()).setPlacementStateCallback(state -> {
-            tvLog.setText("got callback for state " + state + "\n" + tvLog.getText());
-        });
-
-
+        setCallbackToStateChanges();
 
         /*
          * add callback for rewards
@@ -91,21 +64,19 @@ public class ExampleActivity extends AppCompatActivity {
                 showEvents(transactions);
             }
         });
-        /*
-         * also you can observe rewards
-         */
-        /*
-        pendingSubscription = Kwizzad.pendingTransactions()
-                .filter(openTransactions -> openTransactions != null && openTransactions.size() > 0)
-                .subscribe(this::showEvents);
-                */
-
 
 
         /*
          * now we are requesting an ad for the placement.
          */
         Kwizzad.requestAd(etPlacement.getText().toString());
+
+        /*
+         * or set an error callback
+         */
+        Kwizzad.getPlacementModel(etPlacement.getText().toString()).setErrorCallback(throwable -> {
+            tvLog.setText("got error " + throwable.getMessage() + " \n" + tvLog.getText());
+        });
 
         adView.setLoading();
     }
@@ -125,8 +96,7 @@ public class ExampleActivity extends AppCompatActivity {
         adView.setOnClickListener(v -> {
             Map<String, Object> customParams = new HashMap<>();
             customParams.put("foo", "bar");
-            Kwizzad
-                    .createAdViewBuilder()
+            Kwizzad.createAdViewBuilder()
                                 /*
                                  * dont forget to set the placement id
                                  */
@@ -154,20 +124,19 @@ public class ExampleActivity extends AppCompatActivity {
             adView.setLoading();
             hideKeyboard();
 
-
-            // we can add callbacks for states
-            Kwizzad.getPlacementModel(etPlacement.getText().toString()).setPlacementStateCallback(state -> {
-                tvLog.setText("got callback for state " + state + "\n" + tvLog.getText());
-            });
-
             /*
              * resubscribing to state changes because placement could be changed
              */
-            resubscribeToStateChanges();
+            setCallbackToStateChanges();
 
             Kwizzad.requestAd(etPlacement.getText().toString());
 
-
+            /*
+             * set an error callback
+             */
+            Kwizzad.getPlacementModel(etPlacement.getText().toString()).setErrorCallback(throwable -> {
+                tvLog.setText("got error " + throwable.getMessage() + " \n" + tvLog.getText());
+            });
         });
     }
 
@@ -186,59 +155,46 @@ public class ExampleActivity extends AppCompatActivity {
         Kwizzad.resume(this);
     }
 
-    private void resubscribeToStateChanges() {
-        if(stateSubscription != null) {
-            stateSubscription.unsubscribe();
-        }
-        /*
-          listen to states changes
-         */
-        stateSubscription = Kwizzad.getPlacementModel(etPlacement.getText().toString()).observeState()
-                /*
-                 * we skip first element because first element is current state
-                 * that we receive immediately after subscription
-                 * but here we want to receive only state changes
-                 */
-                .skip(1)
-                .subscribe(state -> {
+    private void setCallbackToStateChanges() {
+        Kwizzad.getPlacementModel(etPlacement.getText().toString()).setPlacementStateCallback(state -> {
+            Log.d(TAG, "got state " + state + " \n" + tvLog.getText());
+            tvLog.setText("got state " + state + " \n" + tvLog.getText());
 
-                    Log.d(TAG, "observed state " + state.adState + " \n" + tvLog.getText());
-                    tvLog.setText("observed state " + state.adState + " \n" + tvLog.getText());
+            switch (state) {
+                case NOFILL:
+                    Log.d(TAG, "no ad for placement " + etPlacement.getText().toString());
+                    tvLog.setText("no ad for placement " + etPlacement.getText().toString() + "\n" + tvLog.getText());
+                    new AlertDialog.Builder(this)
+                            .setTitle("NOFILL")
+                            .setMessage("there is no ad. sorry")
+                            .setNeutralButton(android.R.string.ok, (dialog, which) -> {})
+                            .create()
+                            .show();
+                    break;
+                case RECEIVED_AD:
+                    // Calculate the total reward amount. We can show this to the app user before starting the actual KWIZZAD.
+                    Log.d(TAG, "ad ready to show for placement " + etPlacement.getText().toString());
+                    tvLog.setText("ad ready to show for placement " + etPlacement.getText().toString() + "\n" + tvLog.getText());
 
-                    switch (state.adState) {
-                        case NOFILL:
-                            Log.d(TAG, "no ad for placement " + etPlacement.getText().toString());
-                            tvLog.setText("no ad for placement " + etPlacement.getText().toString() + "\n" + tvLog.getText());
-                            new AlertDialog.Builder(this)
-                                    .setTitle("NOFILL")
-                                    .setMessage("there is no ad. sorry")
-                                    .setNeutralButton(android.R.string.ok, (dialog, which) -> {})
-                                    .create()
-                                    .show();
-                            break;
-                        case RECEIVED_AD:
-                            // Calculate the total reward amount. We can show this to the app user before starting the actual KWIZZAD.
-                            Log.d(TAG, "ad ready to show for placement " + etPlacement.getText().toString());
-                            tvLog.setText("ad ready to show for placement " + etPlacement.getText().toString() + "\n" + tvLog.getText());
+                    adView.setPlacementModel(Kwizzad.getPlacementModel(etPlacement.getText().toString()));
+                    Kwizzad.prepare(etPlacement.getText().toString(), this);
+                    break;
+                case AD_READY:
+                    rewardsAreShown = false;
+                    break;
+                case DISMISSED:
 
-                            adView.setPlacementModel(Kwizzad.getPlacementModel(etPlacement.getText().toString()));
-                            Kwizzad.prepare(etPlacement.getText().toString(), this);
-                            break;
-                        case AD_READY:
-                            rewardsAreShown = false;
-                            break;
-                        case DISMISSED:
+                    Log.d(TAG, "finished showing the ad for placement " + etPlacement.getText().toString());
+                    tvLog.setText("finished showing the ad for placement " + etPlacement.getText().toString() + "\n" + tvLog.getText());
 
-                            Log.d(TAG, "finished showing the ad for placement " + etPlacement.getText().toString());
-                            tvLog.setText("finished showing the ad for placement " + etPlacement.getText().toString() + "\n" + tvLog.getText());
+                    adView.setDismissed();
+                    break;
+                default:
+                    Log.d(TAG, "unhandled state " + state);
+                    break;
+            }
+        });
 
-                            adView.setDismissed();
-                            break;
-                        default:
-                            Log.d(TAG, "unhandled state " + state.adState);
-                            break;
-                    }
-                });
     }
 
 
@@ -271,19 +227,6 @@ public class ExampleActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        /**
-         * unsubscribe everything on the tag "this"
-         */
-        RxSubscriber.unsubscribe(this);
-
-
-        if(stateSubscription != null) {
-            stateSubscription.unsubscribe();
-        }
-
-
-        if(pendingSubscription != null) {
-            pendingSubscription.unsubscribe();
-        }
+        Kwizzad.setPendingTransactionsCallback(null);
     }
 }

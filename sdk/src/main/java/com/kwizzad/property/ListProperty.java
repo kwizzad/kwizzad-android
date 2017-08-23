@@ -8,8 +8,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-import rx.Observable;
-import rx.subjects.BehaviorSubject;
+import io.reactivex.Observable;
+import io.reactivex.subjects.BehaviorSubject;
 
 /**
  * ListProperty is basically just a normal List that allows you to bind to it for changes.
@@ -208,9 +208,9 @@ public class ListProperty<LIST_TYPE> implements List<LIST_TYPE> {
 
     public Observable<List<LIST_TYPE>> observe() {
         if (subject == null) {
-            subject = BehaviorSubject.create(this);
+            subject = BehaviorSubject.createDefault(this);
         }
-        return subject.asObservable();
+        return subject;
     }
 
     public void notifyChanged() {

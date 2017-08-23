@@ -1,26 +1,30 @@
-package com.kwizzad.model;
+package com.kwizzad;
 
-import com.kwizzad.IPlacementModel;
 import com.kwizzad.log.QLog;
+import com.kwizzad.model.AdState;
+import com.kwizzad.model.ImageInfo;
 import com.kwizzad.model.events.AdResponseEvent;
 import com.kwizzad.model.events.Reward;
 import com.kwizzad.property.IReadableProperty;
 import com.kwizzad.property.Property;
 
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
-import rx.Observable;
-import rx.subjects.PublishSubject;
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
 
-public class PlacementModel implements IPlacementModel {
-
-    public int currentStep = 0;
+public class PlacementModel extends AbstractPlacementModel {
 
     private PublishSubject<String> _pageStarted = PublishSubject.create();
     private PublishSubject<String> _pageFinished = PublishSubject.create();
-    public String goalUrl;
+    private final Property<AdResponseEvent.CloseType> _closeType = Property.create(AdResponseEvent.CloseType.OVERALL);
+    private final Property<State> state = Property.create(new State(AdState.INITIAL));
+    private final Property<Boolean> closeButtonVisible = Property.create(false);
+
+    private AdResponseEvent adresponse;
+    private int currentStep = 0;
+    private String goalUrl;
 
     public PlacementModel() {
         Observable.combineLatest(
@@ -51,74 +55,18 @@ public class PlacementModel implements IPlacementModel {
         return adresponse;
     }
 
-    public void setAdresponse(AdResponseEvent adresponse) {
+    @Override
+    void setAdresponse(AdResponseEvent adresponse) {
         this.adresponse = adresponse;
         goalUrl = null;
         if (adresponse != null)
             _closeType.set(adresponse.closeButtonVisibility);
     }
 
-    @Override
-    public IReadableProperty<AdResponseEvent.CloseType> closeType() {
-        return _closeType;
-    }
-
-    @Override
-    public AdResponseEvent.CloseType getCloseType() {
-        return closeType().get();
-    }
-
-    @Override
-    public Observable<AdResponseEvent.CloseType> observeCloseType() {
-        return closeType().observe();
-    }
-
-    public static final class State {
-        public final long changed;
-        public final AdState adState;
-
-        public State(AdState adState) {
-            this.adState = adState;
-            this.changed = System.currentTimeMillis();
-        }
-    }
-
-    public final Property<State> state = Property.create(new State(AdState.INITIAL));
-    private final Property<AdResponseEvent.CloseType> _closeType = Property.create(AdResponseEvent.CloseType.OVERALL);
-    public final Property<Boolean> closeButtonVisible = Property.create(false);
-
     public AdState getAdState() {
         return state.get().adState;
     }
 
-    public Observable<AdState> observeAdState() {
-        return state.observe().map(pstate -> pstate.adState);
-    }
-
-    public void setAdState(AdState state) {
-        QLog.d("changing state to "+state);
-
-        handleStateChangesCallbacks(state);
-
-        this.state.set(new State(state));
-    }
-
-    private void handleStateChangesCallbacks(AdState state) {
-        if(stateCallback != null) {
-            stateCallback.callback(state);
-        }
-        switch (state) {
-            case SHOWING_AD:
-                willPresentAd();
-                break;
-            case DISMISSED:
-                willDismissAd();
-                break;
-        }
-    }
-
-    private AdResponseEvent adresponse;
-    public Date retryAfter;
 
     public Iterable<Reward> getRewards() {
         if (adresponse != null) {
@@ -169,41 +117,8 @@ public class PlacementModel implements IPlacementModel {
     }
 
     @Override
-    public Observable<State> observeState() {
-        return state.observe();
-    }
-
-    @Override
-    public boolean isCloseButtonVisible() {
-        return closeButtonVisible.get();
-    }
-
-    @Override
-    public Observable<Boolean> observeCloseButtonVisible() {
-        return closeButtonVisible.observe();
-    }
-
-    @Override
-    public Observable<String> pageStarted() {
-        return _pageStarted;
-    }
-
-    public void pageStarted(String url) {
-        _pageStarted.onNext(url);
-    }
-
-    @Override
-    public Observable<String> pageFinished() {
-        return _pageFinished;
-    }
-
-    @Override
     public boolean hasGoalUrl() {
         return false;
-    }
-
-    public void pageFinished(String url) {
-        _pageFinished.onNext(url);
     }
 
     public Reward getReward(Reward.Type rewardType) {
@@ -213,7 +128,6 @@ public class PlacementModel implements IPlacementModel {
         }
         return null;
     }
-
 
     private PlacementSimpleCallback willPresentCallback;
     private PlacementSimpleCallback willDismissCallback;
@@ -244,5 +158,101 @@ public class PlacementModel implements IPlacementModel {
     @Override
     public void setPlacementStateCallback(PlacementStateCallback callback) {
         stateCallback = callback;
+    }
+
+    @Override
+    Observable<State> observeState() {
+        return state.observe();
+    }
+
+    @Override
+    void pageFinished(String url) {
+        _pageFinished.onNext(url);
+    }
+
+    @Override
+    void pageStarted(String url) {
+        _pageStarted.onNext(url);
+    }
+
+    @Override
+    void setAdState(AdState state) {
+        QLog.d("changing state to "+state);
+
+        this.state.set(new State(state));
+
+        handleStateChangesCallbacks(state);
+    }
+
+
+    private void handleStateChangesCallbacks(AdState state) {
+        if(stateCallback != null) {
+            stateCallback.callback(state);
+        }
+        switch (state) {
+            case SHOWING_AD:
+                willPresentAd();
+                break;
+            case DISMISSED:
+                willDismissAd();
+                break;
+        }
+    }
+
+
+    @Override
+    String getGoalUrl() {
+        return goalUrl;
+    }
+
+    @Override
+    void setGoalUrl(String goalUrl) {
+        this.goalUrl = goalUrl;
+    }
+
+    @Override
+    void setCurrentStep(int i) {
+        currentStep = i;
+    }
+
+    @Override
+    Object getCurrentStep() {
+        return currentStep;
+    }
+
+    @Override
+    IReadableProperty<AdResponseEvent.CloseType> closeType() {
+        return _closeType;
+    }
+
+    @Override
+    AdResponseEvent.CloseType getCloseType() {
+        return closeType().get();
+    }
+
+    @Override
+    Observable<AdResponseEvent.CloseType> observeCloseType() {
+        return closeType().observe();
+    }
+
+    @Override
+    boolean isCloseButtonVisible() {
+        return closeButtonVisible.get();
+    }
+
+    @Override
+    Observable<Boolean> observeCloseButtonVisible() {
+        return closeButtonVisible.observe();
+    }
+
+    @Override
+    Observable<String> pageStarted() {
+        return _pageStarted;
+    }
+
+
+    @Override
+    Observable<String> pageFinished() {
+        return _pageFinished;
     }
 }

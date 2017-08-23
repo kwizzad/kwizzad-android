@@ -15,6 +15,11 @@ public class NoFillEvent extends AAdEvent {
     @Override
     public void from(JSONObject o) throws JSONException {
         super.from(o);
-        retryAfter = Util.fromISO8601(o.getString("retryAfter"));
+
+        if(o.has("retryIn")) {
+            retryAfter = new Date(System.currentTimeMillis() + o.getLong("retryIn"));
+        } else {
+            retryAfter = Util.fromISO8601(o.getString("retryAfter"));
+        }
     }
 }

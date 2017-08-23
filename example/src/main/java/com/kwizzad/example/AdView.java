@@ -10,16 +10,17 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.kwizzad.IPlacementModel;
+import com.kwizzad.AbstractPlacementModel;
 import com.kwizzad.model.ImageInfo;
 import com.kwizzad.model.events.Reward;
 
 import java.net.URL;
 import java.util.List;
 
-import rx.Observable;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+
 
 /**
  * Created by tvsmiles on 12.05.17.
@@ -67,13 +68,10 @@ public class AdView extends FrameLayout {
         ivKwizzImage.setImageResource(R.drawable.kwizzad_logo);
     }
 
-    public void setPlacementModel(IPlacementModel placementModel) {
+    public void setPlacementModel(AbstractPlacementModel placementModel) {
         ad.setEnabled(true);
         Iterable<Reward> rewards = placementModel.getRewards();
         Iterable<Reward> summarizedRewards = Reward.summarize(rewards);
-
-        List<ImageInfo> imageUrls = placementModel.getAdImageUrls();
-
 
         Observable.fromCallable(() -> {
                     URL newurl = new URL(placementModel.getAdResponse().squaredThumbnailURL());
@@ -96,11 +94,22 @@ public class AdView extends FrameLayout {
         tvAdTitle.setText(placementModel.getHeadline());
 
         if(summarizedRewards.iterator().hasNext()) {
-            tvPointsAmount.setText("+" + summarizedRewards.iterator().next().amount);
+            if(summarizedRewards.iterator().next().amount > 0) {
+                tvPointsAmount.setText("+" + summarizedRewards.iterator().next().amount);
+                tvPointsAmount.setVisibility(VISIBLE);
+            } else {
+                tvPointsAmount.setVisibility(GONE);
+            }
         } else {
             int totalReward = 0;
             for (Reward reward: rewards) totalReward += reward.amount;
-            tvPointsAmount.setText("+" + totalReward);
+
+            if(totalReward > 0) {
+                tvPointsAmount.setText("+" + totalReward);
+                tvPointsAmount.setVisibility(VISIBLE);
+            } else {
+                tvPointsAmount.setVisibility(GONE);
+            }
         }
     }
 

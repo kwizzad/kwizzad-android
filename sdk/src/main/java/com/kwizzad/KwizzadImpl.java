@@ -9,8 +9,8 @@ import com.kwizzad.model.Model;
 
 public class KwizzadImpl extends AKwizzadBase {
 
-    public KwizzadImpl(Model model, ISchedulers schedulers, KwizzadApi api, Configuration configuration) {
-        super(model, schedulers, api, configuration);
+    public KwizzadImpl(Model model, ISchedulers schedulers, Configuration configuration) {
+        super(model, schedulers, configuration);
 
         if (BuildConfig.DEBUG) {
 

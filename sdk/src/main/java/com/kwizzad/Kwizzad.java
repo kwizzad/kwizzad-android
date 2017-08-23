@@ -14,17 +14,13 @@ import com.kwizzad.model.AdState;
 import com.kwizzad.model.IUserDataModel;
 import com.kwizzad.model.Model;
 import com.kwizzad.model.OpenTransaction;
-import com.kwizzad.model.PlacementModel;
 import com.kwizzad.model.events.AdResponseEvent;
 import com.kwizzad.model.events.Reward;
-import com.kwizzad.property.IReadableProperty;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import rx.Observable;
 
 public final class Kwizzad {
 
@@ -40,7 +36,10 @@ public final class Kwizzad {
 
         ISchedulers schedulers = new AsyncSchedulers();
 
-        impl = new KwizzadImpl(model, schedulers, new KwizzadApi(schedulers, model), configuration);
+        //init kwizzad api
+        KwizzadApi.getInstance().init(model);
+
+        impl = new KwizzadImpl(model, schedulers, configuration);
 
         impl.start();
 
@@ -55,14 +54,14 @@ public final class Kwizzad {
 
         if (android.os.Build.VERSION.SDK_INT < MIN_SUPPORTED_OS_VERSION){
             // Do something for lollipop and above versions
-            QLog.e("you are using old android version. any kwizzad ad will not be shown. (minimum supported android version is 4.3)");
-            model.getPlacement(placementId).setAdState(AdState.DISMISSED);
+            QLog.e("you are using old android version. any kwizzad ad will not be shown. (minimum supported android version is 4.4)");
+            model.getPlacement(placementId).notifyError("you are using old android version. any kwizzad ad will not be shown. (minimum supported android version is 4.4)");
             return;
         }
 
         if(!isInitialized()) {
             QLog.d("sdk has not completed initialization yet. can not request ad yet. please wait until it finishes.");
-            model.getPlacement(placementId).setAdState(AdState.DISMISSED);
+            model.getPlacement(placementId).notifyError("sdk has not completed initialization yet. can not request ad yet. please wait until it finishes.");
             return;
         }
 
@@ -88,32 +87,13 @@ public final class Kwizzad {
 
 
     public static boolean canShowAd(String placementId) {
-        PlacementModel placementModel = model.getPlacement(placementId);
+        AbstractPlacementModel placementModel = model.getPlacement(placementId);
         if (placementModel.getAdState() == AdState.AD_READY) {
             return true;
         }
         return false;
     }
 
-    /**
-     * please use getPlacementModel(id).getState() or getPlacement(id).observeState()
-     * @param placementId
-     * @return
-     */
-    @Deprecated
-    public static IReadableProperty<PlacementModel.State> placementState(String placementId) {
-        return model.getPlacement(placementId).state;
-    }
-
-    /**
-     * please use getPlacementModel(id).closeButtonVisible()
-     * @param placementId
-     * @return
-     */
-    @Deprecated
-    public static IReadableProperty<Boolean> closeButtonVisible(String placementId) {
-        return model.getPlacement(placementId).closeButtonVisible;
-    }
 
     public static boolean isInitialized() {
         return model.initialized.get();
@@ -122,7 +102,7 @@ public final class Kwizzad {
     public static void prepare(String placementId, Activity activity) {
         if(!isInitialized()) {
             QLog.d("sdk has not completed initialization yet. please wait until it finishes.");
-            model.getPlacement(placementId).setAdState(AdState.DISMISSED);
+            model.getPlacement(placementId).notifyError("sdk has not completed initialization yet. please wait until it finishes.");
             return;
         }
 
@@ -132,7 +112,7 @@ public final class Kwizzad {
     public static void start(String placementId, ViewGroup frame, Map<String, Object> customParameters) {
         if(!isInitialized()) {
             QLog.d("sdk has not completed initialization yet. please wait until it finishes.");
-            model.getPlacement(placementId).setAdState(AdState.DISMISSED);
+            model.getPlacement(placementId).notifyError("sdk has not completed initialization yet. please wait until it finishes.");
             return;
         }
 
@@ -142,7 +122,7 @@ public final class Kwizzad {
     public static void close(String placementId) {
         if(!isInitialized()) {
             QLog.d("sdk has not completed initialization yet. please wait until it finishes.");
-            model.getPlacement(placementId).setAdState(AdState.DISMISSED);
+            model.getPlacement(placementId).notifyError("sdk has not completed initialization yet. please wait until it finishes.");
             return;
         }
 
@@ -162,30 +142,16 @@ public final class Kwizzad {
     }
 
     /**
-     * Currently pending transactions.
-     *
-     * @return
+     * Set callback to receive current pending transactions
+     * @param callback callback to receive current pending transactions
      */
-    public static Observable<Collection<OpenTransaction>> pendingTransactions() {
-        return impl.pendingTransactions();
-    }
-
-    public static Observable<Throwable> observeErrors() {
-        return impl.observeErrors();
-    }
-
-    public static void setErrorsCallback(KwizzadErrorCallback errorCallback) {
-        impl.setErrorCallback(errorCallback);
-    }
-
     public static void setPendingTransactionsCallback(PendingTransactionsCallback callback) {
         impl.setPendingTransactionsCallback(callback);
     }
 
     /**
      * Finish the transaction. If the request works, this should remove the transaction getFrom the list and mark it completed
-     *
-     * @return
+     * @param transaction transaction that must be closed
      */
     public static void completeTransaction(OpenTransaction transaction) {
         if(!isInitialized()) {
@@ -196,6 +162,10 @@ public final class Kwizzad {
         impl.completeTransaction(transaction);
     }
 
+    /**
+     * Finish the transactions. If the request works, this should remove the transactions getFrom the list and mark it completed
+     * @param openTransactions collection of transactions that must be closed
+     */
     public static void completeTransactions(Collection<OpenTransaction> openTransactions) {
 
         if(!isInitialized()) {
@@ -223,11 +193,11 @@ public final class Kwizzad {
      * @return
      */
     @Deprecated
-    public static IPlacementModel getPlacement(String placementId) {
+    public static AbstractPlacementModel getPlacement(String placementId) {
         return model.getPlacement(placementId);
     }
 
-    public static IPlacementModel getPlacementModel(String placementId) {
+    public static AbstractPlacementModel getPlacementModel(String placementId) {
         return model.getPlacement(placementId);
     }
 

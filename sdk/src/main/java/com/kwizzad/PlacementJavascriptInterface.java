@@ -10,16 +10,16 @@ import android.webkit.SslErrorHandler;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import com.kwizzad.api.KwizzadApi;
 import com.kwizzad.api.Request;
 import com.kwizzad.log.QLog;
 import com.kwizzad.model.AdState;
 import com.kwizzad.model.Model;
-import com.kwizzad.model.PlacementModel;
 import com.kwizzad.model.events.AdTrackingEvent;
 
-import rx.Observable;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * if (typeof window.handleKwizzadJIEvent === 'function') {
@@ -30,20 +30,18 @@ public class PlacementJavascriptInterface {
 
     private final WebView webView;
     private final AKwizzadBase kwizzad;
-    private final PlacementModel placementModel;
-    private final Model model;
+    private final AbstractPlacementModel placementModel;
 
     private boolean goalUrlCondition = true;
     private boolean dismissOnGoalUrl = true;
     private Handler handler = new Handler();
     private boolean goalReached;
 
-    public PlacementJavascriptInterface(WebView webView, PlacementModel placementModel, AKwizzadBase kwizzad, Model model) {
+    public PlacementJavascriptInterface(WebView webView, AbstractPlacementModel placementModel, AKwizzadBase kwizzad) {
         this.placementModel = placementModel;
 
         this.webView = webView;
         this.kwizzad = kwizzad;
-        this.model = model;
         //applyGoalUrl(placementModel.adresponse.goalUrlPattern);
 
         webView.addJavascriptInterface(this, "KwizzAdJI");
@@ -58,8 +56,8 @@ public class PlacementJavascriptInterface {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                QLog.d("load " + url + ", goalurl: " + placementModel.goalUrl);
-                if (placementModel.goalUrl != null && url.contains(placementModel.goalUrl) == goalUrlCondition) {
+                QLog.d("load " + url + ", goalurl: " + placementModel.getGoalUrl());
+                if (placementModel.getGoalUrl() != null && url.contains(placementModel.getGoalUrl()) == goalUrlCondition) {
                     if (placementModel.getAdState() == AdState.SHOWING_AD
                             || placementModel.getAdState() == AdState.CALL2ACTION
                             || placementModel.getAdState() == AdState.CALL2ACTIONCLICKED) {
@@ -72,7 +70,7 @@ public class PlacementJavascriptInterface {
                                 kwizzad.sendEvents(
                                         AdTrackingEvent
                                                 .create("adDismissed", placementModel.getAdResponse().adId)
-                                                .internalParameter("step", placementModel.currentStep)
+                                                .internalParameter("step", placementModel.getCurrentStep())
                                 );
                             }
 
@@ -99,7 +97,7 @@ public class PlacementJavascriptInterface {
                         }
                         return true;
                     } catch (Exception e) {
-                        QLog.e(e);
+                        QLog.e(e );
                     }
 
                 }
@@ -133,8 +131,8 @@ public class PlacementJavascriptInterface {
                                         .url(url.substring(1))
                                         .method("GET", null)
                                         .build())
-                                .flatMap(kwizzad.api::send)
-                                .flatMap(kwizzad.api::isValidResponse)
+                                .flatMap(KwizzadApi.getInstance()::send)
+                                .flatMap(KwizzadApi.getInstance()::isValidResponse)
 
                                 .subscribeOn(Schedulers.io())
                                 .observeOn(AndroidSchedulers.mainThread())
@@ -235,7 +233,7 @@ public class PlacementJavascriptInterface {
                 this.goalUrlCondition = false;
             }
 
-            placementModel.goalUrl = goalUrlPattern;
+            placementModel.setGoalUrl(goalUrlPattern);
         }
     }
 
@@ -286,7 +284,7 @@ public class PlacementJavascriptInterface {
             handler.post(() -> {
                 QLog.d("challenge completed, current step " + num);
                 kwizzad.sendEvents(AdTrackingEvent.create("challenge" + num + "completed", placementModel.getAdResponse().adId));
-                placementModel.currentStep = num + 1;
+                placementModel.setCurrentStep(num + 1);
             });
         }
     }
