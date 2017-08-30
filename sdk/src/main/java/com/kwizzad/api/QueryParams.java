@@ -16,13 +16,15 @@ import java.util.Map;
 public class QueryParams {
     public static String addCometQueryParams(String url, Model model, Context context) {
         Map<String, String> params = new HashMap<>();
+        String appName = String.valueOf(context.getPackageManager().getApplicationLabel(context.getApplicationInfo()));
+
         params.put("device_make", Build.MANUFACTURER);
         params.put("device_model", Build.MODEL);
         params.put("device_os", "Android");
         params.put("device_osv", Build.VERSION.RELEASE);
         params.put("app_bundle", context.getPackageName());
         params.put("app_domain", context.getPackageName());
-        params.put("app_name", context.getApplicationInfo().nonLocalizedLabel.toString());
+        params.put("app_name", appName);
         if(model.userDataModel.getGender() != Gender.UNKNOWN) {
             params.put("gender", model.userDataModel.getGender().toString());
         }
