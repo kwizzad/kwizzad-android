@@ -8,13 +8,17 @@ import com.kwizzad.model.events.Reward;
 import com.kwizzad.property.IReadableProperty;
 import com.kwizzad.property.Property;
 
+import java.lang.ref.WeakReference;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.subjects.PublishSubject;
 
-public class PlacementModel extends AbstractPlacementModel {
+public class PlacementModel implements  IPlacementModel {
 
     private PublishSubject<String> _pageStarted = PublishSubject.create();
     private PublishSubject<String> _pageFinished = PublishSubject.create();
@@ -25,6 +29,17 @@ public class PlacementModel extends AbstractPlacementModel {
     private AdResponseEvent adresponse;
     private int currentStep = 0;
     private String goalUrl;
+
+    private Date retryAfter;
+
+    private final PublishSubject<Throwable> errors = PublishSubject.create();
+    private Disposable errorSubscription;
+
+
+    Date getRetryAfter() { return retryAfter; }
+    void setRetryAfter(Date retryAfter) { this.retryAfter = retryAfter; }
+
+
 
     public PlacementModel() {
         Observable.combineLatest(
@@ -55,7 +70,6 @@ public class PlacementModel extends AbstractPlacementModel {
         return adresponse;
     }
 
-    @Override
     void setAdresponse(AdResponseEvent adresponse) {
         this.adresponse = adresponse;
         goalUrl = null;
@@ -129,53 +143,50 @@ public class PlacementModel extends AbstractPlacementModel {
         return null;
     }
 
-    private PlacementSimpleCallback willPresentCallback;
-    private PlacementSimpleCallback willDismissCallback;
-    private PlacementStateCallback stateCallback;
+    private WeakReference<PlacementSimpleCallback> willPresentCallback;
+    private WeakReference<PlacementSimpleCallback> willDismissCallback;
+    private WeakReference<PlacementStateCallback> stateCallback;
+    private WeakReference<KwizzadErrorCallback> errorCallbackRef;
 
     private void willPresentAd() {
-        if(willPresentCallback != null) {
-            willPresentCallback.callback();
+        if(willPresentCallback != null && willPresentCallback.get() != null) {
+            willPresentCallback.get().callback();
         }
     }
 
     private void willDismissAd() {
-        if(willDismissCallback != null) {
-            willDismissCallback.callback();
+        if(willDismissCallback != null && willDismissCallback.get() != null) {
+            willDismissCallback.get().callback();
         }
     }
 
     @Override
     public void setWillPresentAdCallback(PlacementSimpleCallback callback) {
-        willPresentCallback = callback;
+        willPresentCallback = new WeakReference<>(callback);
     }
 
     @Override
     public void setWillDismissAdCallback(PlacementSimpleCallback callback) {
-        willDismissCallback = callback;
+        willDismissCallback = new WeakReference<>(callback);
     }
 
     @Override
     public void setPlacementStateCallback(PlacementStateCallback callback) {
-        stateCallback = callback;
+        stateCallback = new WeakReference<>(callback);
     }
 
-    @Override
     Observable<State> observeState() {
         return state.observe();
     }
 
-    @Override
     void pageFinished(String url) {
         _pageFinished.onNext(url);
     }
 
-    @Override
     void pageStarted(String url) {
         _pageStarted.onNext(url);
     }
 
-    @Override
     void setAdState(AdState state) {
         QLog.d("changing state to "+state);
 
@@ -186,8 +197,8 @@ public class PlacementModel extends AbstractPlacementModel {
 
 
     private void handleStateChangesCallbacks(AdState state) {
-        if(stateCallback != null) {
-            stateCallback.callback(state);
+        if(stateCallback != null && stateCallback.get() != null) {
+            stateCallback.get().callback(state);
         }
         switch (state) {
             case SHOWING_AD:
@@ -200,59 +211,72 @@ public class PlacementModel extends AbstractPlacementModel {
     }
 
 
-    @Override
     String getGoalUrl() {
         return goalUrl;
     }
 
-    @Override
     void setGoalUrl(String goalUrl) {
         this.goalUrl = goalUrl;
     }
 
-    @Override
     void setCurrentStep(int i) {
         currentStep = i;
     }
 
-    @Override
     Object getCurrentStep() {
         return currentStep;
     }
 
-    @Override
     IReadableProperty<AdResponseEvent.CloseType> closeType() {
         return _closeType;
     }
 
-    @Override
     AdResponseEvent.CloseType getCloseType() {
         return closeType().get();
     }
 
-    @Override
     Observable<AdResponseEvent.CloseType> observeCloseType() {
         return closeType().observe();
     }
 
-    @Override
     boolean isCloseButtonVisible() {
         return closeButtonVisible.get();
     }
 
-    @Override
     Observable<Boolean> observeCloseButtonVisible() {
         return closeButtonVisible.observe();
     }
 
-    @Override
     Observable<String> pageStarted() {
         return _pageStarted;
     }
 
-
-    @Override
     Observable<String> pageFinished() {
         return _pageFinished;
+    }
+
+
+    @Override
+    public void setErrorCallback(KwizzadErrorCallback errorCallback) {
+        errorCallbackRef = new WeakReference<>(errorCallback);
+        if(errorSubscription != null) {
+            errorSubscription.dispose();
+        }
+
+        errorSubscription = errors.subscribeOn(AndroidSchedulers.mainThread()).subscribe(throwable -> {
+            if(errorCallbackRef != null && errorCallbackRef.get() != null)
+                errorCallbackRef.get().onError(throwable);
+        });
+    }
+
+    @Override
+    public void notifyError(String message) {
+        setAdState(AdState.DISMISSED);
+        errors.onNext(new Throwable(message));
+    }
+
+    @Override
+    public void notifyError(Throwable error) {
+        errors.onNext(error);
     }
 }

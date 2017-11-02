@@ -1,7 +1,5 @@
 package com.kwizzad.api;
 
-import com.kwizzad.ISchedulers;
-import com.kwizzad.Kwizzad;
 import com.kwizzad.db.DB;
 import com.kwizzad.db.FromJson;
 import com.kwizzad.db.ToJson;

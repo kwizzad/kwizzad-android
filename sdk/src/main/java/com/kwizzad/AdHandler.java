@@ -38,7 +38,7 @@ abstract class AdHandler {
     private TextView forfeitButton;
     private TextView claimButton;
     private TextView closeDialogTitle;
-    private AbstractPlacementModel placement;
+    private PlacementModel placement;
     private Disposable lastTick;
     private boolean call2ActionClicked;
 
@@ -65,7 +65,7 @@ abstract class AdHandler {
             this.customParameters.putAll((Map<String, Object>) savedInstanceState.getSerializable("CUSTOM_PARAMS"));
         }
 
-        placement = Kwizzad.getPlacementModel(placementId);
+        placement = Kwizzad.getModel().getPlacement(placementId);
     }
 
     private void showCloseDialog() {
@@ -130,6 +130,7 @@ abstract class AdHandler {
                     showCloseDialog();
             });
         }
+
 
         progress = (ProgressBar) view.findViewById(R.id.progressBar);
 

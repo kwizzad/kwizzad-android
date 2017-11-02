@@ -5,12 +5,13 @@ import android.graphics.BitmapFactory;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.CardView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.kwizzad.AbstractPlacementModel;
+import com.kwizzad.IPlacementModel;
 import com.kwizzad.model.ImageInfo;
 import com.kwizzad.model.events.Reward;
 
@@ -57,7 +58,7 @@ public class AdView extends FrameLayout {
         tvTeaser.setText(getContext().getString(R.string.loading_text));
         tvAdTitle.setText(getContext().getString(R.string.loading_text));
         tvPointsAmount.setText(getContext().getString(R.string.loading_text));
-        ivKwizzImage.setImageResource(R.drawable.kwizzad_logo);
+        ivKwizzImage.setImageResource(android.R.color.transparent);
     }
 
     public void setDismissed() {
@@ -65,10 +66,10 @@ public class AdView extends FrameLayout {
         tvTeaser.setText(getContext().getString(R.string.dismissed_text));
         tvAdTitle.setText(getContext().getString(R.string.dismissed_text));
         tvPointsAmount.setText(getContext().getString(R.string.dismissed_text));
-        ivKwizzImage.setImageResource(R.drawable.kwizzad_logo);
+        ivKwizzImage.setImageResource(android.R.color.transparent);;
     }
 
-    public void setPlacementModel(AbstractPlacementModel placementModel) {
+    public void setPlacementModel(IPlacementModel placementModel) {
         ad.setEnabled(true);
         Iterable<Reward> rewards = placementModel.getRewards();
         Iterable<Reward> summarizedRewards = Reward.summarize(rewards);
@@ -85,17 +86,18 @@ public class AdView extends FrameLayout {
                             }
                         },
                         throwable -> {
-                            if (ivKwizzImage != null) {
-                                ivKwizzImage.setImageResource(R.drawable.kwizzad_logo);
-                            }
+                            ivKwizzImage.setImageResource(android.R.color.transparent);
+                            Log.e("AdView", "couldnt find any image");
                         });
 
         tvTeaser.setText(placementModel.getTeaser());
         tvAdTitle.setText(placementModel.getHeadline());
 
         if(summarizedRewards.iterator().hasNext()) {
-            if(summarizedRewards.iterator().next().amount > 0) {
-                tvPointsAmount.setText("+" + summarizedRewards.iterator().next().amount);
+            int maxAmount = summarizedRewards.iterator().next().maxAmount;
+            int amount = summarizedRewards.iterator().next().amount;
+            if(amount > 0 || maxAmount > 0) {
+                tvPointsAmount.setText("+" + (amount == 0 ? maxAmount : amount));
                 tvPointsAmount.setVisibility(VISIBLE);
             } else {
                 tvPointsAmount.setVisibility(GONE);

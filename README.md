@@ -276,7 +276,7 @@ public class MainActivity extends AppCompatActivity {
 
 # Step 4: Handle errors in placements
 
-Once you receive an error inside a placement, your app will be notified in error callback. As soon as you receive an error, the ads state will be set to DISMISSED. To set error callback use
+Once you receive an error inside a placement, your app will be notified in error callback. As soon as you receive an error, the ads state is set to DISMISSED. To set error callback use
 
 ```java
     Kwizzad.getPlacementModel(placementId).setErrorCallback(throwable -> {

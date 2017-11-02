@@ -87,7 +87,7 @@ public final class Kwizzad {
 
 
     public static boolean canShowAd(String placementId) {
-        AbstractPlacementModel placementModel = model.getPlacement(placementId);
+        IPlacementModel placementModel = model.getPlacement(placementId);
         if (placementModel.getAdState() == AdState.AD_READY) {
             return true;
         }
@@ -193,11 +193,11 @@ public final class Kwizzad {
      * @return
      */
     @Deprecated
-    public static AbstractPlacementModel getPlacement(String placementId) {
+    public static IPlacementModel getPlacement(String placementId) {
         return model.getPlacement(placementId);
     }
 
-    public static AbstractPlacementModel getPlacementModel(String placementId) {
+    public static IPlacementModel getPlacementModel(String placementId) {
         return model.getPlacement(placementId);
     }
 
@@ -205,6 +205,9 @@ public final class Kwizzad {
         return model.userDataModel;
     }
 
+    static Model getModel() {
+        return model;
+    }
 
 
     public static class AdViewBuilder {

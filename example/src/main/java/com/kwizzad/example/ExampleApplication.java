@@ -1,11 +1,15 @@
 package com.kwizzad.example;
 
 import android.app.Application;
+import android.content.Context;
+import android.content.SharedPreferences;
 
 import com.kwizzad.Configuration;
 import com.kwizzad.Kwizzad;
 import com.kwizzad.log.QLog;
 import com.kwizzad.model.Gender;
+
+import java.util.UUID;
 
 public class ExampleApplication extends Application {
 
@@ -33,8 +37,25 @@ public class ExampleApplication extends Application {
         QLog.i("gender "+Kwizzad.getUserData().getGender());
         QLog.i("username "+Kwizzad.getUserData().getName());
 
-        Kwizzad.getUserData().setUserId("12345");
+        Kwizzad.getUserData().setUserId(getUserId());
         Kwizzad.getUserData().setGender(Gender.MALE);
         Kwizzad.getUserData().setName("Horst Günther");
+    }
+
+    /**
+     * Obtain user id, you can set here whatever id you want
+     * @return
+     */
+    private String getUserId() {
+        SharedPreferences sp = getSharedPreferences("userdata", Context.MODE_PRIVATE);
+        String userId = sp.getString("userId", "");
+        if(userId.isEmpty()) {
+            userId = UUID.randomUUID().toString();
+            sp.edit()
+                    .putString("userId", userId)
+                    .apply();
+        }
+
+        return userId;
     }
 }

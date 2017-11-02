@@ -12,7 +12,10 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.kwizzad.IPlacementModel;
 import com.kwizzad.Kwizzad;
+import com.kwizzad.KwizzadErrorCallback;
+import com.kwizzad.PendingTransactionsCallback;
 import com.kwizzad.model.OpenTransaction;
 import com.kwizzad.model.events.Reward;
 
@@ -38,6 +41,10 @@ public class ExampleActivity extends AppCompatActivity {
     private TextView tvLog;
     private CheckBox cbPreloadAutomatically;
 
+    IPlacementModel.PlacementStateCallback placementStateCallback;
+    KwizzadErrorCallback errorCallback;
+    PendingTransactionsCallback transactionsCallback;
+
     //we need this param to avoid showing rewards dialog several time
     private boolean rewardsAreShown = false;
 
@@ -59,11 +66,12 @@ public class ExampleActivity extends AppCompatActivity {
         /*
          * add callback for rewards
          */
-        Kwizzad.setPendingTransactionsCallback(transactions -> {
+        transactionsCallback = transactions -> {
             if(transactions != null && transactions.size() > 0) {
                 showEvents(transactions);
             }
-        });
+        };
+        Kwizzad.setPendingTransactionsCallback(transactionsCallback);
 
 
         /*
@@ -72,11 +80,13 @@ public class ExampleActivity extends AppCompatActivity {
         Kwizzad.requestAd(etPlacement.getText().toString());
 
         /*
-         * or set an error callback
+         * set an error callback
          */
-        Kwizzad.getPlacementModel(etPlacement.getText().toString()).setErrorCallback(throwable -> {
+        errorCallback = throwable -> {
             tvLog.setText("got error " + throwable.getMessage() + " \n" + tvLog.getText());
-        });
+        };
+
+        Kwizzad.getPlacementModel(etPlacement.getText().toString()).setErrorCallback(errorCallback);
 
         adView.setLoading();
     }
@@ -156,7 +166,7 @@ public class ExampleActivity extends AppCompatActivity {
     }
 
     private void setCallbackToStateChanges() {
-        Kwizzad.getPlacementModel(etPlacement.getText().toString()).setPlacementStateCallback(state -> {
+        placementStateCallback = state -> {
             Log.d(TAG, "got state " + state + " \n" + tvLog.getText());
             tvLog.setText("got state " + state + " \n" + tvLog.getText());
 
@@ -193,8 +203,9 @@ public class ExampleActivity extends AppCompatActivity {
                     Log.d(TAG, "unhandled state " + state);
                     break;
             }
-        });
+        };
 
+        Kwizzad.getPlacementModel(etPlacement.getText().toString()).setPlacementStateCallback(placementStateCallback);
     }
 
 
@@ -220,13 +231,4 @@ public class ExampleActivity extends AppCompatActivity {
         }
     }
 
-
-
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        Kwizzad.setPendingTransactionsCallback(null);
-    }
 }

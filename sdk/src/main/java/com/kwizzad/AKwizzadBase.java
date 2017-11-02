@@ -32,6 +32,7 @@ import com.kwizzad.model.events.TransactionConfirmedEvent;
 import com.kwizzad.property.Property;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -63,6 +64,7 @@ public class AKwizzadBase {
     private Disposable stateSubscription;
     private Disposable transactionsSubscription;
     private Disposable rerequestSubscription;
+    private WeakReference<PendingTransactionsCallback> transactionsCallback;
 
     private Property<List<Object>> scheduledTrackingEventsProperty = Property.create(new ArrayList<>());
 
@@ -92,6 +94,7 @@ public class AKwizzadBase {
         KwizzadApi.getInstance().observe(OpenTransactionsEvent.class)
                 .observeOn(schedulers.mainThread())
                 .subscribe(openTransactionsEvent -> {
+                    if (!model.noAdIsShowing()) return;
 
                     QLog.d("got open transactions " + openTransactionsEvent);
 
@@ -110,7 +113,7 @@ public class AKwizzadBase {
         KwizzadApi.getInstance().observe(AdResponseEvent.class)
                 .observeOn(schedulers.mainThread())
                 .subscribe((event) -> {
-                    final AbstractPlacementModel m = model.getPlacement(event.placementId);
+                    final PlacementModel m = model.getPlacement(event.placementId);
                     if (m.getAdState() == AdState.REQUESTING_AD) {
 
                         if (BuildConfig.DEBUG && model.overrideWeb != null) {
@@ -128,7 +131,7 @@ public class AKwizzadBase {
         KwizzadApi.getInstance().observe(NoFillEvent.class)
                 .observeOn(schedulers.mainThread())
                 .subscribe(event -> {
-                    final AbstractPlacementModel m = model.getPlacement(event.placementId);
+                    final PlacementModel m = model.getPlacement(event.placementId);
                     if (m.getAdState() == AdState.REQUESTING_AD) {
                         m.setAdresponse(null);
                         m.setRetryAfter(event.retryAfter);
@@ -217,22 +220,28 @@ public class AKwizzadBase {
 
 
     public void setPendingTransactionsCallback(PendingTransactionsCallback callback) {
+        transactionsCallback = new WeakReference<>(callback);
         if(transactionsSubscription != null) {
             transactionsSubscription.dispose();
+            transactionsSubscription = null;
         }
 
         if(callback != null) {
             transactionsSubscription = pendingTransactions()
-                    .subscribe(callback::callback);
+                    .subscribe(transactions -> {
+                        if (transactionsCallback != null && transactionsCallback.get() != null) {
+                            transactionsCallback.get().callback(transactions);
+                        }
+                    });
         }
     }
 
     public void requestAd(String placementId) {
         QLog.d("request ad for " + placementId);
 
-        final AbstractPlacementModel placementModel = model.getPlacement(placementId);
+        final PlacementModel placementModel = model.getPlacement(placementId);
 
-        AbstractPlacementModel.State placementState = placementModel.getState();
+        IPlacementModel.State placementState = placementModel.getState();
         switch (placementState.adState) {
             case REQUESTING_AD:
                 // ignoring new request
@@ -369,7 +378,7 @@ public class AKwizzadBase {
 
 
     public void prepare(String placementId, Activity activity) {
-        final AbstractPlacementModel placementModel = model.getPlacement(placementId);
+        final PlacementModel placementModel = model.getPlacement(placementId);
 
         if (activity == null || activity.getBaseContext() == null) {
             QLog.e("Application Lifecycle Error: Can only prepare ads if Activity and Context initialized!");
@@ -437,6 +446,7 @@ public class AKwizzadBase {
             currentWebView.getSettings().setUseWideViewPort(true);
             currentWebView.getSettings().setLoadWithOverviewMode(true);
             currentWebView.getSettings().setAppCachePath(currentWebView.getContext().getCacheDir().getAbsolutePath());
+            currentWebView.getSettings().setSupportMultipleWindows(true);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 CookieManager.getInstance().setAcceptThirdPartyCookies(currentWebView, true);
             }
@@ -514,7 +524,7 @@ public class AKwizzadBase {
     public void start(String placementId, ViewGroup frame, Map<String, Object> customParameters) {
         QLog.d("starting " + placementId);
 
-        final AbstractPlacementModel placementModel = model.getPlacement(placementId);
+        final PlacementModel placementModel = model.getPlacement(placementId);
 
         if (placementModel.getState().adState != AdState.AD_READY) {
             QLog.e("wrong state of ad: " + placementModel.getState() + ", cancelling ad alltogether!");
@@ -532,7 +542,7 @@ public class AKwizzadBase {
     public void close(String placementId) {
         QLog.d("closing " + placementId);
 
-        final AbstractPlacementModel placementModel = model.getPlacement(placementId);
+        final PlacementModel placementModel = model.getPlacement(placementId);
 
         AdState adState = placementModel.getAdState();
 

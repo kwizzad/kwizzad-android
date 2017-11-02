@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alert_close_title"><![CDATA[Est-tu sûr de vouloir quitter et de laisser passer #number_of_rewards# #reward_name#?]]></string>
+    <string name="alert_close_title_var"><![CDATA[Est-tu sûr de vouloir quitter et de laisser passer #number_of_rewards# #reward_name#?]]></string>
+    <string name="alert_close_title_0">Est-tu sûr de vouloir manquer cette offre?</string>
+    <string name="alert_close_claim">Continue et réclamer une récompense</string>
+    <string name="alert_close_forfeit">Quitter et renoncer à la récompense</string>
+    <string name="close_alert_title">Fermer la fenêtre et revenir à l\'application?</string>
+    <string name="close_alert_yes">Oui, fermer la fenêtre</string>
+    <string name="close_alert_no">Annuler</string>
+    <string name="reward.withLimit">Jusqu\'à #reward#</string>
+    <string name="reward.incenitiveText">Gagne #potentialTotalReward# avec un quiz.</string>
+    <string name="transaction.confirmationText">Félicitations, tu as gagné #oneOrMoreRewards#!</string>
+    <string name="enum.two">#first# et #second#</string>
+    <string name="enum.moreThanTwo">#commaSeparated#, et #last#</string>
+</resources>

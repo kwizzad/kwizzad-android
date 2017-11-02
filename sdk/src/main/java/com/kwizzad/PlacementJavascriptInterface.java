@@ -5,8 +5,10 @@ import android.content.Intent;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Handler;
+import android.os.Message;
 import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
+import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -30,14 +32,14 @@ public class PlacementJavascriptInterface {
 
     private final WebView webView;
     private final AKwizzadBase kwizzad;
-    private final AbstractPlacementModel placementModel;
+    private final PlacementModel placementModel;
 
     private boolean goalUrlCondition = true;
     private boolean dismissOnGoalUrl = true;
     private Handler handler = new Handler();
     private boolean goalReached;
 
-    public PlacementJavascriptInterface(WebView webView, AbstractPlacementModel placementModel, AKwizzadBase kwizzad) {
+    public PlacementJavascriptInterface(WebView webView, PlacementModel placementModel, AKwizzadBase kwizzad) {
         this.placementModel = placementModel;
 
         this.webView = webView;
@@ -46,6 +48,16 @@ public class PlacementJavascriptInterface {
 
         webView.addJavascriptInterface(this, "KwizzAdJI");
         QLog.d("added javascript interface");
+        webView.setWebChromeClient(new WebChromeClient(){
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+                WebView newWebView = new WebView(view.getContext());
+                WebView.WebViewTransport transport = (WebView.WebViewTransport)resultMsg.obj;
+                transport.setWebView(newWebView);
+                resultMsg.sendToTarget();
+                return true;
+            }
+        });
         webView.setWebViewClient(new WebViewClient() {
 
             // TODO: new
@@ -240,6 +252,7 @@ public class PlacementJavascriptInterface {
     @JavascriptInterface
     public void challengeReady(int num) {
         QLog.d("jsi: challenge placementState: " + num);
+        if (placementModel.getAdResponse() == null) return;
 
         handler.post(() -> {
             kwizzad.sendEvents(AdTrackingEvent.create("adLoaded", placementModel.getAdResponse().adId));
@@ -300,7 +313,18 @@ public class PlacementJavascriptInterface {
     public void finished() {
         QLog.d("jsi: finished");
         handler.post(() -> {
-            placementModel.setAdState(AdState.DISMISSED);
+            switch (placementModel.getAdState()) {
+                case SHOWING_AD:
+                case CALL2ACTION:
+                case CALL2ACTIONCLICKED:
+                case GOAL_REACHED:
+                    placementModel.setAdState(AdState.DISMISSED);
+                    break;
+                default:
+                    placementModel.setAdresponse(null);
+                    placementModel.notifyError("internal error");
+                    break;
+            }
         });
     }
 

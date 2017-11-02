@@ -1,6 +1,5 @@
 package com.kwizzad.model;
 
-import com.kwizzad.AbstractPlacementModel;
 import com.kwizzad.PlacementModel;
 import com.kwizzad.db.PersistedProperty;
 import com.kwizzad.property.Property;
@@ -17,7 +16,7 @@ public class Model {
     public volatile String advertisingId;
     public Property<Boolean> initialized = Property.create(false);
 
-    private Map<String, AbstractPlacementModel> placements = new HashMap<>();
+    private Map<String, PlacementModel> placements = new HashMap<>();
 
     public Property<Set<OpenTransaction>> openTransactions = Property.create(new HashSet<>());
 
@@ -33,10 +32,23 @@ public class Model {
         return "https://" + apiKey.substring(0, 7) + "-" + Integer.toString(serverIndex) +  ".api.kwizzad.com/api/sdk/";
     }
 
-    public AbstractPlacementModel getPlacement(String placementId) {
+    public PlacementModel getPlacement(String placementId) {
         if (!placements.containsKey(placementId)) {
             placements.put(placementId, new PlacementModel());
         }
         return placements.get(placementId);
     }
+
+    public boolean noAdIsShowing() {
+        for (Map.Entry<String, PlacementModel> entry : placements.entrySet()) {
+            if (entry.getValue().getAdState() == AdState.SHOWING_AD ||
+                    entry.getValue().getAdState() == AdState.CALL2ACTION ||
+                    entry.getValue().getAdState() == AdState.CALL2ACTIONCLICKED ||
+                    entry.getValue().getAdState() == AdState.GOAL_REACHED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
