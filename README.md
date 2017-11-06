@@ -42,12 +42,10 @@ allprojects {
 }
 
 dependencies {
-    compile ('com.github.kwizzad:kwizzad-android:x.y.z') {
-		// exclude group:"com.android.support" // uncomment in case of android support library dependency conflicts
-	}
+    api 'com.github.kwizzad:kwizzad-android:x.y.z'
 }
 ```
-
+Important: KWIZZAD requires rxjava 2 at least as runtime only dependency. So if you don't use rxjava 2 in your project use 'runtimeOnly', otherwise you can use 'api' or 'implementation'   
 To uniquely identify devices our SDK requires the Android Advertising ID. For collecting the Android Advertising ID and to comply with the Google Play content guidelines you have to add the Google Play Services SDK to your Android project. More information about the Google Play Services SDK can be found on [Google Developer site](https://developers.google.com/android/guides/setup).
 
 
@@ -55,23 +53,19 @@ To uniquely identify devices our SDK requires the Android Advertising ID. For co
 ## Resolve dependency conflicts
 
 To avoid dependency conflicts you should always use the most recent version of any library and so does KWIZZAD.
+Inside KWIZZAD we use libraries:
+- com.android.support:appcompat
+- com.google.android.gms:play-services-basement
+- io.reactivex.rxjava2:rxjava
+- io.reactivex.rxjava2:rxandroid
 
-In case of dependency conflicts between your app and KWIZZAD you can always include KWIZZAD without any dependency and explicitly use your versions. Please send us a note of your exact dependency library and version so we can perform a compatibility check.
+And all of them marked with 'implementation' so if you dont use any of these libraries add them with 'runtimeOnly'.
 
-To manually include KWIZZAD dependencies your build.gradle should look like this:
-
-```java
-dependencies {
-    compile ('com.github.kwizzad:kwizzad-android:x.y.z') {
-            exclude group:"com.android.support" // avoid android support library dependency conflicts
-            // exclude group:  // you can exclude more potential conflicts here
-            // exclude module:
-            }
-    }
-}
 ```
-
-
+    runtimeOnly 'com.google.android.gms:play-services-basement:11.4.2'
+    runtimeOnly 'io.reactivex.rxjava2:rxjava:2.1.5'
+    runtimeOnly 'io.reactivex.rxjava2:rxandroid:2.0.1'
+```
 
 # Initialize the SDK
 
@@ -140,13 +134,12 @@ Notice that by default ads are rerequested immediatelly after getting DISMISSED 
 
 The KWIZZAD SDK maintains an internal lifecycle for each ad and allows you to control the exact behaviour depending on your needs. Here is a simple example implementation that will prepare a KWIZZAD to show an ad.
 
-
 ```java
 @Override
 public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     ...
-    Kwizzad.getPlacementModel(placementId).setPlacementStateCallback(state -> {
+    placementStateCallback = state -> {
         switch (state) {
             case NOFILL:
                 //no ad for placement, show error
@@ -171,7 +164,8 @@ public void onCreate(Bundle savedInstanceState) {
             default:
                 break;
         }
-    });
+    };
+    Kwizzad.getPlacementModel(placementId).setPlacementStateCallback(placementStateCallback);
 }
 
 @Override
@@ -181,7 +175,7 @@ public void onDestroy() {
     Kwizzad.close(placementId);
 }
 ```
-
+Notice that all callbacks in KWIZZAD are save in weak references to avoid memory leaks. So it is important to keep reference to callback, to avoid unexpected behaviour.
 Now to show the ad you have to use ```Kwizzad.createAdViewBuilder()```, that supports both Fragment implementations depending on your needs:
 
 1. supportDialogFragment() creates a fragment based on android.support.v4.app.DialogFragment
@@ -231,6 +225,9 @@ import com.kwizzad.Kwizzad;
 import com.kwizzad.model.PendingEvent;
 
 public class MainActivity extends AppCompatActivity {
+
+    PendingTransactionsCallback transactionsCallback;
+    
     @Override
     protected void onResume() {
         super.onResume();
@@ -238,11 +235,12 @@ public class MainActivity extends AppCompatActivity {
         /*
         * add callback for rewards
         */
-        Kwizzad.setPendingTransactionsCallback(transactions -> {
+        transactionsCallback = transactions -> {
             if(transactions != null && transactions.size() > 0) {
                 showEvents(transactions);
             }
-        });
+        };
+        Kwizzad.setPendingTransactionsCallback(transactionsCallback);
 
         Kwizzad.resume(this);
     }
@@ -279,7 +277,6 @@ public class MainActivity extends AppCompatActivity {
 Once you receive an error inside a placement, your app will be notified in error callback. As soon as you receive an error, the ads state is set to DISMISSED. To set error callback use
 
 ```java
-    Kwizzad.getPlacementModel(placementId).setErrorCallback(throwable -> {
-        Log.e(TAG, throwable.getMessage());
-    });
+    errorCallback = throwable -> Log.e(TAG, throwable.getMessage());
+    Kwizzad.getPlacementModel(placementId).setErrorCallback(errorCallback);
 ```

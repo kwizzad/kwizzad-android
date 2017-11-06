@@ -68,6 +68,8 @@ public class AKwizzadBase {
 
     private Property<List<Object>> scheduledTrackingEventsProperty = Property.create(new ArrayList<>());
 
+    private Property<Set<OpenTransaction>> openTransactions = Property.create(new HashSet<>());
+
     public Boolean preloadAdsAutomatically = true;
 
     public AKwizzadBase(Model model, ISchedulers schedulers, Configuration configuration) {
@@ -80,12 +82,12 @@ public class AKwizzadBase {
         }
 
         // TODO: check for change!
-        model.apiKey.set(configuration.apiKey);
+        model.setApiKey(configuration.apiKey);
         model.overriddenBaseUrl = configuration.overrideServer;
         model.overrideWeb = configuration.overrideWeb;
 
-        if (model.installId.get() == null) {
-            model.installId.set(UUID.randomUUID().toString());
+        if (model.getInstallId()== null) {
+            model.setInstallId(UUID.randomUUID().toString());
         }
     }
 
@@ -100,12 +102,12 @@ public class AKwizzadBase {
 
                     Set<OpenTransaction> newSet = new HashSet<>();
                     newSet.addAll(openTransactionsEvent.transactionList);
-                    newSet.removeAll(model.openTransactions.get());
+                    newSet.removeAll(openTransactions.get());
 
 
                     if (newSet.size() > 0) {
                         QLog.d("setting transactions");
-                        model.openTransactions.set(newSet);
+                        openTransactions.set(newSet);
                     }
 
                 });
@@ -586,8 +588,7 @@ public class AKwizzadBase {
      * @return
      */
     public Observable<Collection<OpenTransaction>> pendingTransactions() {
-        return
-                model.openTransactions
+        return openTransactions
                         .observe()
                         .map(this::filterActiveEvents);
     }

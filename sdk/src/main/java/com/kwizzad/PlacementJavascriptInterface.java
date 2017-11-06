@@ -16,7 +16,6 @@ import com.kwizzad.api.KwizzadApi;
 import com.kwizzad.api.Request;
 import com.kwizzad.log.QLog;
 import com.kwizzad.model.AdState;
-import com.kwizzad.model.Model;
 import com.kwizzad.model.events.AdTrackingEvent;
 
 import io.reactivex.Observable;
