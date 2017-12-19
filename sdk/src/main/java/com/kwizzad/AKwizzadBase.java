@@ -82,12 +82,12 @@ public class AKwizzadBase {
         }
 
         // TODO: check for change!
-        model.setApiKey(configuration.apiKey);
+        model.apiKey.set(configuration.apiKey);
         model.overriddenBaseUrl = configuration.overrideServer;
         model.overrideWeb = configuration.overrideWeb;
 
-        if (model.getInstallId()== null) {
-            model.setInstallId(UUID.randomUUID().toString());
+        if (model.installId.get()== null) {
+            model.installId.set(UUID.randomUUID().toString());
         }
     }
 

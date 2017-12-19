@@ -43,7 +43,7 @@ public final class Kwizzad {
 
         impl.start();
 
-        model.setInitialized(true);
+        model.initialized.set(true);
     }
 
     private Kwizzad(){
@@ -96,7 +96,7 @@ public final class Kwizzad {
 
 
     public static boolean isInitialized() {
-        return model.isInitialized();
+        return model.initialized.get();
     }
 
     public static void prepare(String placementId, Activity activity) {

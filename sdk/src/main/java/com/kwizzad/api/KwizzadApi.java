@@ -125,10 +125,10 @@ public class KwizzadApi {
         return Observable.fromCallable(
                 () -> {
                     final String str = convert(event).toString();
-                    final String apiKey = model.getApiKey();
+                    final String apiKey = model.apiKey.get();
                     Request.Builder request = new Request.Builder();
                     request.method("POST", RequestBody.create("application/json; charset=UTF-8", str));
-                    request.url(model.getBaseUrl(apiKey) + apiKey + "/" + model.getApiKey());
+                    request.url(model.getBaseUrl(apiKey) + apiKey + "/" + model.installId.get());
 
                     Request r = request.build();
                     log(r, str);

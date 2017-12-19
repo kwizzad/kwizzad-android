@@ -1,6 +1,8 @@
 package com.kwizzad.model;
 
 import com.kwizzad.PlacementModel;
+import com.kwizzad.db.PersistedProperty;
+import com.kwizzad.property.Property;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,12 +12,12 @@ public class Model {
     private static final int serverIndex = new Random(System.currentTimeMillis()).nextInt(3) + 1;
 
     public volatile String advertisingId;
-    private boolean initialized = false;
+    public Property<Boolean> initialized = Property.create(false);
 
     private Map<String, PlacementModel> placements = new HashMap<>();
 
-    private String apiKey = "apiKey";
-    private String installId = "installId";
+    public final Property<String> apiKey = new PersistedProperty<String>("apiKey", String.class);
+    public final Property<String> installId = new PersistedProperty<String>("installId", String.class);
 
     public final UserDataModel userDataModel = new UserDataModel();
 
@@ -44,29 +46,5 @@ public class Model {
             }
         }
         return true;
-    }
-
-    public boolean isInitialized() {
-        return initialized;
-    }
-
-    public void setInitialized(boolean initialized) {
-        this.initialized = initialized;
-    }
-
-    public String getApiKey() {
-        return apiKey;
-    }
-
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
-    }
-
-    public String getInstallId() {
-        return installId;
-    }
-
-    public void setInstallId(String installId) {
-        this.installId = installId;
     }
 }
