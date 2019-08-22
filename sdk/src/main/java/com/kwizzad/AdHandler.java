@@ -69,7 +69,6 @@ abstract class AdHandler {
     }
 
     private void showCloseDialog() {
-        closeDialog.setVisibility(View.VISIBLE);
 
 
         Iterable<Reward> rewardList = Kwizzad.getPlacementModel(placementId).getRewards();
@@ -84,12 +83,14 @@ abstract class AdHandler {
         QLog.d("reward " + reward);
 
         if (call2ActionClicked && !(placement.hasGoalUrl())) {
+            closeDialog.setVisibility(View.VISIBLE);
             closeDialogTitle.setText(R.string.close_alert_title);
             forfeitButton.setText(R.string.close_alert_yes);
             claimButton.setText(R.string.close_alert_no);
 
         } else {
             if (reward != null && (reward.amount > 0 || reward.maxAmount > 0)) {
+                closeDialog.setVisibility(View.VISIBLE);
 
                 String title = "";
 

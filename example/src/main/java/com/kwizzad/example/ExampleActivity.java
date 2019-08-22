@@ -1,6 +1,7 @@
 package com.kwizzad.example;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
@@ -104,29 +105,11 @@ public class ExampleActivity extends AppCompatActivity {
 
 
         adView.setOnClickListener(v -> {
-            Map<String, Object> customParams = new HashMap<>();
-            customParams.put("foo", "bar");
-            Kwizzad.createAdViewBuilder()
-                                /*
-                                 * dont forget to set the placement id
-                                 */
+
+            Intent intent = Kwizzad.createAdViewBuilder()
                     .setPlacementId(etPlacement.getText().toString())
-                                /*
-                                 * like this
-                                 */
-                    .setCustomParameters(customParams)
-                                /*
-                                 * or like this
-                                 */
-                    .setCustomParameter("bar", "foo")
-                                /*
-                                 * build it
-                                 */
-                    .dialogFragment()
-                                /*
-                                 * and show it
-                                 */
-                    .show(getFragmentManager(), "ad");
+                    .activityIntent(this);
+            startActivity(intent);
         });
 
         btnPreload.setOnClickListener(v -> {
