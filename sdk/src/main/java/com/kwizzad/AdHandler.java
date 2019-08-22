@@ -106,7 +106,8 @@ abstract class AdHandler {
                 closeDialogTitle.setText(title);
             } else {
 
-                closeDialogTitle.setText(R.string.alert_close_title_0);
+                //closeDialogTitle.setText(R.string.alert_close_title_0);
+                close();
             }
         }
 

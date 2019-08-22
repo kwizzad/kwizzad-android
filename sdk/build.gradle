@@ -21,7 +21,6 @@ buildscript {
 
 android {
     compileSdkVersion 26
-    buildToolsVersion '26.0.2'
 
     lintOptions {
         disable "Convert2streamapi"
